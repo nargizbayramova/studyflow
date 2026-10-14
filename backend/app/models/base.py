@@ -18,6 +18,9 @@ class Base(DeclarativeBase):
 
 
 class TimestampMixin:
+    # Fetch server-side timestamps via RETURNING; async sessions can't lazy-load expired attrs.
+    __mapper_args__ = {"eager_defaults": True}
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

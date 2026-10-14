@@ -1,8 +1,7 @@
 from fastapi import APIRouter
 
-from app.api.v1 import health
+from app.api.v1 import auth, availability, courses, health, tasks
 
 api_router = APIRouter()
-api_router.include_router(health.router)
-
-# Phase 2: auth, courses, tasks, schedule routers get registered here.
+for module in (health, auth, courses, tasks, availability):
+    api_router.include_router(module.router)

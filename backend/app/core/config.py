@@ -46,7 +46,10 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    s = Settings()
+    if s.ENVIRONMENT != "development" and s.SECRET_KEY == "change-me":
+        raise RuntimeError("SECRET_KEY must be set outside development (openssl rand -hex 32)")
+    return s
 
 
 settings = get_settings()

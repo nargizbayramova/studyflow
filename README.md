@@ -44,3 +44,16 @@ alembic upgrade head
 ## Database schema
 
 `users` 1─* `courses` 1─* `tasks` 1─* `study_blocks`; `users` 1─* `availability_slots`.
+
+## Auth, CRUD & monitoring (Phase 2)
+
+- Register at `POST /api/v1/auth/register`, then click **Authorize** in Swagger (username = email).
+- Endpoints: `/auth/*`, `/courses`, `/tasks` (filters: `course_id`, `status`, `priority`, `due_from`, `due_to`, `q`), `/availability`.
+- Telegram alerts: set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env`; without them alerts are only logged.
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest -q
+```
