@@ -1,4 +1,4 @@
-# AcademicPlanner – AI-Powered Academic Planner
+# AcademicPlanner – AI-Powered Academic Planner 🎓
 
 Monorepo:
 
