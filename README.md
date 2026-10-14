@@ -1,9 +1,9 @@
-# StudyFlow – AI-Powered Academic Planner
+# AcademicPlanner – AI-Powered Academic Planner
 
 Monorepo:
 
 ```
-studyflow/
+academic-planner/
 ├── backend/    # FastAPI + PostgreSQL + Alembic
 └── frontend/   # React + Tailwind + TypeScript (later)
 ```
