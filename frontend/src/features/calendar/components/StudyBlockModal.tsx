@@ -9,6 +9,7 @@ interface StudyBlockModalProps {
   isOpen: boolean;
   onClose: () => void;
   block?: StudyBlock | null;
+  initialSlot?: Date | null;
   tasks: Task[];
   courses: Course[];
   onCreate: (data: { task_id: number; start_at: string; end_at: string }) => Promise<void>;
@@ -20,6 +21,7 @@ export const StudyBlockModal: React.FC<StudyBlockModalProps> = ({
   isOpen,
   onClose,
   block,
+  initialSlot,
   tasks,
   courses,
   onCreate,
@@ -39,14 +41,14 @@ export const StudyBlockModal: React.FC<StudyBlockModalProps> = ({
       setEndAt(new Date(block.end_at).toISOString().slice(0, 16));
     } else {
       setTaskId(tasks[0]?.id || 0);
-      const now = new Date();
-      now.setMinutes(0, 0, 0);
-      setStartAt(now.toISOString().slice(0, 16));
-      const later = new Date(now.getTime() + 2 * 3600000);
+      const base = initialSlot ? new Date(initialSlot) : new Date();
+      if (!initialSlot) base.setMinutes(0, 0, 0);
+      setStartAt(base.toISOString().slice(0, 16));
+      const later = new Date(base.getTime() + 1.5 * 3600000);
       setEndAt(later.toISOString().slice(0, 16));
     }
     setError(null);
-  }, [block, isOpen, tasks]);
+  }, [block, initialSlot, isOpen, tasks]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
