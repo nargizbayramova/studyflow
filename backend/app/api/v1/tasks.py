@@ -5,7 +5,7 @@ from pydantic import AwareDatetime
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DbSession, Paging, apply_update, delete_owned, get_owned
-from app.models import Course, Task, TaskPriority, TaskStatus
+from app.models import Course, Task, TaskPriority, TaskStatus, TaskType
 from app.schemas.planner import TaskCreate, TaskRead, TaskUpdate
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
@@ -24,6 +24,7 @@ async def list_tasks(
     db: DbSession,
     page: Paging,
     course_id: int | None = None,
+    type_: TaskType | None = Query(None, alias="type"),
     status_: TaskStatus | None = Query(None, alias="status"),
     priority: TaskPriority | None = None,
     due_from: AwareDatetime | None = None,
@@ -33,6 +34,8 @@ async def list_tasks(
     stmt = select(Task).where(Task.user_id == user.id)
     if course_id is not None:
         stmt = stmt.where(Task.course_id == course_id)
+    if type_ is not None:
+        stmt = stmt.where(Task.type == type_)
     if status_ is not None:
         stmt = stmt.where(Task.status == status_)
     if priority is not None:

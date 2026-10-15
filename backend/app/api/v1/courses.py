@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app.api.deps import CurrentUser, DbSession, Paging, apply_update, get_owned
+from app.api.deps import CurrentUser, DbSession, Paging, apply_update, delete_owned, get_owned
 from app.models import Course
 from app.schemas.planner import CourseCreate, CourseRead, CourseUpdate
 
@@ -21,9 +21,15 @@ async def _commit(db: DbSession) -> None:
 
 @router.get("", response_model=list[CourseRead])
 async def list_courses(
-    user: CurrentUser, db: DbSession, page: Paging, include_archived: bool = False
+    user: CurrentUser,
+    db: DbSession,
+    page: Paging,
+    semester: str | None = None,
+    include_archived: bool = False,
 ) -> list[Course]:
     q = select(Course).where(Course.user_id == user.id)
+    if semester:
+        q = q.where(Course.semester == semester)
     if not include_archived:
         q = q.where(Course.is_archived.is_(False))
     q = q.order_by(Course.semester.desc(), Course.code).limit(page.limit).offset(page.offset)
@@ -51,3 +57,8 @@ async def update_course(
     apply_update(course, body, nullable=frozenset({"instructor"}))
     await _commit(db)
     return course
+
+
+@router.delete("/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_course(course_id: int, user: CurrentUser, db: DbSession) -> None:
+    await delete_owned(db, Course, course_id, user.id)

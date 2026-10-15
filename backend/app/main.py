@@ -26,9 +26,10 @@ Click **Authorize** and log in with your email as *username* to call protected e
 TAGS_METADATA = [
     {"name": "Health", "description": "Service and database health probes."},
     {"name": "Auth", "description": "Registration, login (JWT) and profile."},
-    {"name": "Courses", "description": "Course management (archive instead of delete)."},
+    {"name": "Courses", "description": "Course management (archive or delete)."},
     {"name": "Tasks", "description": "Assignments, exams, quizzes, milestones."},
-    {"name": "Schedule", "description": "Weekly availability. *(AI schedule: Phase 3)*"},
+    {"name": "Schedule", "description": "Weekly availability."},
+    {"name": "Study Blocks", "description": "Study session blocks for academic tasks (FR-09, FR-10)."},
 ]
 
 

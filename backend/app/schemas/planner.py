@@ -3,7 +3,7 @@ from typing import Annotated
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, EmailStr, Field, model_validator
 
-from app.models import SlotKind, TaskPriority, TaskStatus, TaskType
+from app.models import BlockStatus, SlotKind, TaskPriority, TaskStatus, TaskType
 
 Str = lambda max_len: Annotated[str, Field(min_length=1, max_length=max_len)]  # noqa: E731
 # bcrypt only uses the first 72 bytes; reject longer instead of silently truncating.
@@ -129,9 +129,60 @@ class SlotCreate(BaseModel):
         return self
 
 
+class SlotUpdate(BaseModel):
+    day_of_week: int | None = Field(None, ge=0, le=6)
+    start_time: time | None = None
+    end_time: time | None = None
+    kind: SlotKind | None = None
+
+    @model_validator(mode="after")
+    def _end_after_start(self) -> "SlotUpdate":
+        if self.start_time is not None and self.end_time is not None and self.end_time <= self.start_time:
+            raise ValueError("end_time must be after start_time")
+        return self
+
+
 class SlotRead(ORM):
     id: int
     day_of_week: int
     start_time: time
     end_time: time
     kind: SlotKind
+
+
+# --- Study blocks ---
+
+class StudyBlockCreate(BaseModel):
+    task_id: int
+    start_at: AwareDatetime
+    end_at: AwareDatetime
+    status: BlockStatus = BlockStatus.PLANNED
+
+    @model_validator(mode="after")
+    def _end_after_start(self) -> "StudyBlockCreate":
+        if self.end_at <= self.start_at:
+            raise ValueError("end_at must be after start_at")
+        return self
+
+
+class StudyBlockUpdate(BaseModel):
+    task_id: int | None = None
+    start_at: AwareDatetime | None = None
+    end_at: AwareDatetime | None = None
+    status: BlockStatus | None = None
+
+    @model_validator(mode="after")
+    def _end_after_start(self) -> "StudyBlockUpdate":
+        if self.start_at is not None and self.end_at is not None and self.end_at <= self.start_at:
+            raise ValueError("end_at must be after start_at")
+        return self
+
+
+class StudyBlockRead(ORM):
+    id: int
+    task_id: int
+    start_at: datetime
+    end_at: datetime
+    status: BlockStatus
+    created_at: datetime
+    updated_at: datetime

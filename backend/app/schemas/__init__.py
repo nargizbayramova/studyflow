@@ -1,3 +1,39 @@
 from app.schemas.health import HealthResponse
+from app.schemas.planner import (
+    CourseCreate,
+    CourseRead,
+    CourseUpdate,
+    SlotCreate,
+    SlotRead,
+    SlotUpdate,
+    StudyBlockCreate,
+    StudyBlockRead,
+    StudyBlockUpdate,
+    TaskCreate,
+    TaskRead,
+    TaskUpdate,
+    Token,
+    UserCreate,
+    UserRead,
+    UserUpdate,
+)
 
-__all__ = ["HealthResponse"]
+__all__ = [
+    "HealthResponse",
+    "UserCreate",
+    "UserUpdate",
+    "UserRead",
+    "Token",
+    "CourseCreate",
+    "CourseUpdate",
+    "CourseRead",
+    "TaskCreate",
+    "TaskUpdate",
+    "TaskRead",
+    "SlotCreate",
+    "SlotUpdate",
+    "SlotRead",
+    "StudyBlockCreate",
+    "StudyBlockUpdate",
+    "StudyBlockRead",
+]

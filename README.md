@@ -48,7 +48,12 @@ alembic upgrade head
 ## Auth, CRUD & monitoring (Phase 2)
 
 - Register at `POST /api/v1/auth/register`, then click **Authorize** in Swagger (username = email).
-- Endpoints: `/auth/*`, `/courses`, `/tasks` (filters: `course_id`, `status`, `priority`, `due_from`, `due_to`, `q`), `/availability`.
+- Endpoints:
+  - `/auth/*`: registration, login (JWT), profile management (`GET`, `PATCH`).
+  - `/courses`: list (with `semester` and `include_archived` filters), create, get, edit/archive (`PATCH`), delete (`DELETE`).
+  - `/tasks`: list (filters: `course_id`, `type`, `status`, `priority`, `due_from`, `due_to`, search `q`), create, get, update (`PATCH`), delete (`DELETE`).
+  - `/availability`: list weekly availability slots, create, get (`GET /{slot_id}`), update (`PATCH /{slot_id}`), delete (`DELETE /{slot_id}`).
+  - `/study-blocks`: study session blocks for tasks (filters: `task_id`, `status`, `start_from`, `start_to`), create, get, update/mark completed (`PATCH`), delete (`DELETE`).
 - Telegram alerts: set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env`; without them alerts are only logged.
 
 ## Tests

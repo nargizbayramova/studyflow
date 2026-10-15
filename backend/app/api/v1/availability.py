@@ -1,9 +1,9 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
 
-from app.api.deps import CurrentUser, DbSession, Paging, delete_owned
+from app.api.deps import CurrentUser, DbSession, Paging, apply_update, delete_owned, get_owned
 from app.models import AvailabilitySlot
-from app.schemas.planner import SlotCreate, SlotRead
+from app.schemas.planner import SlotCreate, SlotRead, SlotUpdate
 
 router = APIRouter(prefix="/availability", tags=["Schedule"])
 
@@ -23,6 +23,25 @@ async def list_slots(user: CurrentUser, db: DbSession, page: Paging) -> list[Ava
 async def create_slot(body: SlotCreate, user: CurrentUser, db: DbSession) -> AvailabilitySlot:
     slot = AvailabilitySlot(**body.model_dump(), user_id=user.id)
     db.add(slot)
+    await db.commit()
+    return slot
+
+
+@router.get("/{slot_id}", response_model=SlotRead)
+async def get_slot(slot_id: int, user: CurrentUser, db: DbSession) -> AvailabilitySlot:
+    return await get_owned(db, AvailabilitySlot, slot_id, user.id)
+
+
+@router.patch("/{slot_id}", response_model=SlotRead)
+async def update_slot(
+    slot_id: int, body: SlotUpdate, user: CurrentUser, db: DbSession
+) -> AvailabilitySlot:
+    slot = await get_owned(db, AvailabilitySlot, slot_id, user.id)
+    new_start = body.start_time if body.start_time is not None else slot.start_time
+    new_end = body.end_time if body.end_time is not None else slot.end_time
+    if new_end <= new_start:
+        raise HTTPException(422, "end_time must be after start_time")
+    apply_update(slot, body)
     await db.commit()
     return slot
 
