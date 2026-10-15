@@ -40,6 +40,7 @@ export const CalendarPage: React.FC = () => {
 
   const [selectedBlock, setSelectedBlock] = useState<StudyBlock | null>(null);
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   // Form states for manual study block schedule
   const [taskId, setTaskId] = useState<number>(0);
@@ -65,17 +66,28 @@ export const CalendarPage: React.FC = () => {
     setStartAt(now.toISOString().slice(0, 16));
     const later = new Date(now.getTime() + 2 * 3600000);
     setEndAt(later.toISOString().slice(0, 16));
+    setModalError(null);
     setIsScheduleOpen(true);
   };
 
   const handleScheduleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createBlock.mutateAsync({
-      task_id: Number(taskId),
-      start_at: new Date(startAt).toISOString(),
-      end_at: new Date(endAt).toISOString(),
-    });
-    setIsScheduleOpen(false);
+    setModalError(null);
+    try {
+      await createBlock.mutateAsync({
+        task_id: Number(taskId),
+        start_at: new Date(startAt).toISOString(),
+        end_at: new Date(endAt).toISOString(),
+      });
+      setIsScheduleOpen(false);
+      setModalError(null);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setModalError(err.message);
+      } else {
+        setModalError("Failed to schedule study session");
+      }
+    }
   };
 
   const handleToggleStatus = async (block: StudyBlock, newStatus: BlockStatus) => {
@@ -302,11 +314,19 @@ export const CalendarPage: React.FC = () => {
       {/* Manual Schedule Modal */}
       <Modal
         isOpen={isScheduleOpen}
-        onClose={() => setIsScheduleOpen(false)}
+        onClose={() => {
+          setIsScheduleOpen(false);
+          setModalError(null);
+        }}
         title="Schedule Study Session"
         description="Select a deliverable and block your study window."
       >
         <form onSubmit={handleScheduleSubmit} className="space-y-4">
+          {modalError && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200/70 text-rose-700 text-xs font-medium">
+              {modalError}
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Task</label>
             <select

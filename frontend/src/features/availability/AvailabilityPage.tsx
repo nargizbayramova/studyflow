@@ -30,16 +30,27 @@ export const AvailabilityPage: React.FC = () => {
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("12:00");
   const [kind, setKind] = useState<SlotKind>("available");
+  const [modalError, setModalError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createSlot.mutateAsync({
-      day_of_week: Number(dayOfWeek),
-      start_time: startTime,
-      end_time: endTime,
-      kind,
-    });
-    setIsModalOpen(false);
+    setModalError(null);
+    try {
+      await createSlot.mutateAsync({
+        day_of_week: Number(dayOfWeek),
+        start_time: startTime,
+        end_time: endTime,
+        kind,
+      });
+      setIsModalOpen(false);
+      setModalError(null);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setModalError(err.message);
+      } else {
+        setModalError("Failed to add time slot");
+      }
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -148,11 +159,19 @@ export const AvailabilityPage: React.FC = () => {
       {/* Add Slot Modal */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setModalError(null);
+        }}
         title="Add Recurring Weekly Slot"
         description="Define your typical available study periods or blocked lectures."
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          {modalError && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200/70 text-rose-700 text-xs font-medium">
+              {modalError}
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Day of Week</label>
             <select

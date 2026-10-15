@@ -1,4 +1,5 @@
-const API_PREFIX = "/api/v1";
+const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/+$/, "");
+const API_PREFIX = `${API_BASE}/api/v1`;
 
 export class ApiError extends Error {
   status: number;
@@ -10,6 +11,52 @@ export class ApiError extends Error {
     this.status = status;
     this.data = data;
   }
+}
+
+export function extractErrorMessage(data: unknown, fallback: string = "Request failed"): string {
+  if (!data) return fallback;
+  if (typeof data === "string") return data;
+
+  if (typeof data === "object") {
+    const record = data as Record<string, unknown>;
+
+    // FastAPI 422: detail is an array of error objects: [{ loc: ["body", "field"], msg: "..." }]
+    if (Array.isArray(record.detail)) {
+      const messages = record.detail
+        .map((item) => {
+          if (typeof item === "string") return item;
+          if (item && typeof item === "object") {
+            const err = item as { loc?: (string | number)[]; msg?: string };
+            const rawField =
+              err.loc && err.loc.length > 0 ? String(err.loc[err.loc.length - 1]) : "";
+            if (rawField && rawField !== "body") {
+              const fieldName = rawField.replace(/_/g, " ");
+              const capitalized = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+              return `${capitalized}: ${err.msg || "Invalid value"}`;
+            }
+            return err.msg || "Invalid value";
+          }
+          return String(item);
+        })
+        .filter(Boolean);
+
+      if (messages.length > 0) {
+        return messages.join("; ");
+      }
+    }
+
+    if (typeof record.detail === "string" && record.detail.trim()) {
+      return record.detail;
+    }
+    if (typeof record.message === "string" && record.message.trim()) {
+      return record.message;
+    }
+    if (typeof record.error === "string" && record.error.trim()) {
+      return record.error;
+    }
+  }
+
+  return fallback;
 }
 
 export function getAuthToken(): string | null {
@@ -47,17 +94,26 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
 
   const token = getAuthToken();
   const headers = new Headers(customHeaders);
-  if (!(options.body instanceof FormData)) {
+  if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(url, {
-    ...rest,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...rest,
+      headers,
+    });
+  } catch (err: unknown) {
+    const msg =
+      err instanceof Error
+        ? `Cannot connect to server at ${API_BASE}. Is the backend running?`
+        : "Network connection error";
+    throw new ApiError(0, msg);
+  }
 
   if (response.status === 401) {
     removeAuthToken();
@@ -73,10 +129,7 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
   const data = isJson ? await response.json() : await response.text();
 
   if (!response.ok) {
-    const message =
-      (isJson && data && (data.detail || data.message)) ||
-      response.statusText ||
-      "Request failed";
+    const message = extractErrorMessage(data, response.statusText || "Request failed");
     throw new ApiError(response.status, message, data);
   }
 

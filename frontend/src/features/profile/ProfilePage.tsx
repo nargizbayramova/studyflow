@@ -19,11 +19,22 @@ export const ProfilePage: React.FC = () => {
   const [passSuccess, setPassSuccess] = useState(false);
   const [passError, setPassError] = useState<string | null>(null);
 
+  const [nameError, setNameError] = useState<string | null>(null);
+
   const handleUpdateName = async (e: React.FormEvent) => {
     e.preventDefault();
-    await updateMe.mutateAsync({ full_name: fullName });
-    setNameSuccess(true);
-    setTimeout(() => setNameSuccess(false), 3000);
+    setNameError(null);
+    try {
+      await updateMe.mutateAsync({ full_name: fullName });
+      setNameSuccess(true);
+      setTimeout(() => setNameSuccess(false), 3000);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setNameError(err.message);
+      } else {
+        setNameError("Failed to update profile name");
+      }
+    }
   };
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -37,11 +48,19 @@ export const ProfilePage: React.FC = () => {
       setPassError("Passwords do not match");
       return;
     }
-    await updateMe.mutateAsync({ password });
-    setPassword("");
-    setConfirmPassword("");
-    setPassSuccess(true);
-    setTimeout(() => setPassSuccess(false), 3000);
+    try {
+      await updateMe.mutateAsync({ password });
+      setPassword("");
+      setConfirmPassword("");
+      setPassSuccess(true);
+      setTimeout(() => setPassSuccess(false), 3000);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setPassError(err.message);
+      } else {
+        setPassError("Failed to change password");
+      }
+    }
   };
 
   return (
@@ -68,6 +87,11 @@ export const ProfilePage: React.FC = () => {
           </div>
 
           <form onSubmit={handleUpdateName} className="mt-6 space-y-4 max-w-md">
+            {nameError && (
+              <div className="p-3 bg-rose-50 border border-rose-200/70 text-rose-700 text-xs font-medium rounded-xl">
+                {nameError}
+              </div>
+            )}
             <Input
               label="Full Name"
               value={fullName}

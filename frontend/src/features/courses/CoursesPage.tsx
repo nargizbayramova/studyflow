@@ -28,6 +28,7 @@ export const CoursesPage: React.FC = () => {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   // Form states
   const [code, setCode] = useState("");
@@ -43,6 +44,7 @@ export const CoursesPage: React.FC = () => {
     setSemester("Fall 2026");
     setColor("#4F46E5");
     setEditingCourse(null);
+    setModalError(null);
   };
 
   const handleOpenCreate = () => {
@@ -57,33 +59,43 @@ export const CoursesPage: React.FC = () => {
     setInstructor(course.instructor || "");
     setSemester(course.semester);
     setColor(course.color);
+    setModalError(null);
     setIsCreateOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingCourse) {
-      await updateCourse.mutateAsync({
-        id: editingCourse.id,
-        data: {
+    setModalError(null);
+    try {
+      if (editingCourse) {
+        await updateCourse.mutateAsync({
+          id: editingCourse.id,
+          data: {
+            code,
+            title,
+            instructor: instructor || null,
+            semester,
+            color,
+          },
+        });
+      } else {
+        await createCourse.mutateAsync({
           code,
           title,
           instructor: instructor || null,
           semester,
           color,
-        },
-      });
-    } else {
-      await createCourse.mutateAsync({
-        code,
-        title,
-        instructor: instructor || null,
-        semester,
-        color,
-      });
+        });
+      }
+      setIsCreateOpen(false);
+      resetForm();
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setModalError(err.message);
+      } else {
+        setModalError("Failed to save course");
+      }
     }
-    setIsCreateOpen(false);
-    resetForm();
   };
 
   const handleToggleArchive = (course: Course) => {
@@ -199,6 +211,11 @@ export const CoursesPage: React.FC = () => {
         description="Enter course code, syllabus name, and tag color."
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          {modalError && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200/70 text-rose-700 text-xs font-medium">
+              {modalError}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Course Code"

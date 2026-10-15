@@ -39,6 +39,7 @@ export const TasksPage: React.FC = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   // Form inputs
   const [title, setTitle] = useState("");
@@ -62,6 +63,7 @@ export const TasksPage: React.FC = () => {
     setPriority("medium");
     setDescription("");
     setEditingTask(null);
+    setModalError(null);
   };
 
   const handleOpenCreate = () => {
@@ -88,11 +90,13 @@ export const TasksPage: React.FC = () => {
     setTaskStatus(task.status);
     setPriority(task.priority);
     setDescription(task.description || "");
+    setModalError(null);
     setIsModalOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setModalError(null);
     const payload = {
       course_id: Number(selectedCourseId),
       title,
@@ -105,13 +109,21 @@ export const TasksPage: React.FC = () => {
       priority,
     };
 
-    if (editingTask) {
-      await updateTask.mutateAsync({ id: editingTask.id, data: payload });
-    } else {
-      await createTask.mutateAsync(payload);
+    try {
+      if (editingTask) {
+        await updateTask.mutateAsync({ id: editingTask.id, data: payload });
+      } else {
+        await createTask.mutateAsync(payload);
+      }
+      setIsModalOpen(false);
+      resetForm();
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setModalError(err.message);
+      } else {
+        setModalError("Failed to save task");
+      }
     }
-    setIsModalOpen(false);
-    resetForm();
   };
 
   const handleToggleStatus = (task: Task) => {
@@ -311,7 +323,6 @@ export const TasksPage: React.FC = () => {
         </div>
       )}
 
-      {/* Task Create/Edit Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => {
@@ -322,6 +333,11 @@ export const TasksPage: React.FC = () => {
         description="Fill in due date, weight percentage, and task details."
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          {modalError && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200/70 text-rose-700 text-xs font-medium">
+              {modalError}
+            </div>
+          )}
           <Input
             label="Deliverable Title"
             required

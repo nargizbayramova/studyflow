@@ -20,6 +20,7 @@ export function useLogin() {
   return useMutation({
     mutationFn: async (credentials: { username: string; password: string }) => {
       const formData = new URLSearchParams();
+      formData.append("grant_type", "password");
       formData.append("username", credentials.username);
       formData.append("password", credentials.password);
 
