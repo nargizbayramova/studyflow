@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiClient, removeAuthToken, setAuthToken } from "./client";
+import { apiClient, getAuthToken, removeAuthToken, setAuthToken } from "./client";
 import { AuthToken, User } from "@/types";
 
 export const authKeys = {
@@ -7,11 +7,13 @@ export const authKeys = {
   me: () => [...authKeys.all, "me"] as const,
 };
 
-export function useMe() {
+export function useMe(options?: { enabled?: boolean }) {
+  const token = getAuthToken();
   return useQuery({
     queryKey: authKeys.me(),
     queryFn: () => apiClient<User>("/auth/me"),
     retry: false,
+    enabled: options?.enabled !== undefined ? options.enabled : Boolean(token),
   });
 }
 

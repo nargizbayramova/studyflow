@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useLogin, useLogout, useMe } from "@/api/auth";
 import { getAuthToken } from "@/api/client";
 import { User } from "@/types";
@@ -14,30 +15,38 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const token = getAuthToken();
-  const { data: user, isLoading: isUserLoading, refetch } = useMe();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [token, setToken] = useState<string | null>(() => getAuthToken());
+
+  const isAuthPage = location.pathname === "/login" || location.pathname === "/register";
+  const shouldFetchMe = Boolean(token && !isAuthPage);
+
+  const { data: user, isLoading: isUserLoading, isError } = useMe({ enabled: shouldFetchMe });
   const loginMutation = useLogin();
   const logoutFn = useLogout();
 
+  const logout = useCallback(() => {
+    setToken(null);
+    logoutFn();
+    navigate("/login", { replace: true });
+  }, [logoutFn, navigate]);
+
   useEffect(() => {
     const handleUnauthorized = () => {
-      logoutFn();
+      logout();
     };
     window.addEventListener("auth:unauthorized", handleUnauthorized);
     return () => window.removeEventListener("auth:unauthorized", handleUnauthorized);
-  }, [logoutFn]);
+  }, [logout]);
 
   const login = async (credentials: { username: string; password: string }) => {
-    await loginMutation.mutateAsync(credentials);
-    await refetch();
+    const res = await loginMutation.mutateAsync(credentials);
+    setToken(res.access_token);
   };
 
-  const logout = () => {
-    logoutFn();
-  };
-
-  const isAuthenticated = !!token && !!user;
-  const isLoading = !!token && isUserLoading;
+  const isAuthenticated = Boolean(token && user);
+  const isLoading = Boolean(token && !user && !isError && !isAuthPage) || Boolean(token && isUserLoading && !isAuthPage);
 
   return (
     <AuthContext.Provider
