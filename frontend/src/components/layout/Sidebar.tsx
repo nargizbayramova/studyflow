@@ -1,85 +1,124 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import {
-  LayoutDashboard,
   BookOpen,
-  CheckSquare,
-  Calendar,
-  Clock,
-  User,
-  GraduationCap,
+  LayoutDashboard,
+  ListChecks,
+  CalendarDays,
+  Clock3,
+  Settings2,
+  ChevronDown,
   LogOut,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const navItems = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Overview", href: "/", icon: LayoutDashboard },
   { name: "Courses", href: "/courses", icon: BookOpen },
-  { name: "Tasks", href: "/tasks", icon: CheckSquare },
-  { name: "Calendar", href: "/calendar", icon: Calendar },
-  { name: "Availability", href: "/availability", icon: Clock },
-  { name: "Profile", href: "/profile", icon: User },
+  { name: "All tasks", href: "/tasks", icon: ListChecks },
+  { name: "Study calendar", href: "/calendar", icon: CalendarDays },
+  { name: "Availability", href: "/availability", icon: Clock3 },
 ];
 
 export const Sidebar: React.FC = () => {
   const { logout, user } = useAuth();
 
+  const initials =
+    user?.full_name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "AM";
+
   return (
-    <aside className="w-64 bg-white border-r border-slate-200/80 flex flex-col h-screen fixed left-0 top-0 z-30">
-      {/* Brand header */}
-      <div className="h-16 flex items-center px-6 gap-3 border-b border-slate-100">
-        <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center text-white shadow-sm shadow-primary-500/30">
-          <GraduationCap className="w-5 h-5" />
+    <aside className="w-[224px] bg-white border-r border-[#E5E6EB] flex flex-col h-screen fixed left-0 top-0 z-30 font-sans">
+      {/* Brand & Workspace */}
+      <div className="p-5 pb-3 flex flex-col gap-5">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-[9px] bg-[#5553B7] flex items-center justify-center text-white shadow-sm flex-shrink-0">
+            <BookOpen className="w-[19px] h-[19px]" />
+          </div>
+          <span className="font-bold text-xl text-[#252735] tracking-tight">StudyFlow</span>
         </div>
-        <div>
-          <span className="font-bold text-slate-900 text-lg tracking-tight">StudyFlow</span>
-          <span className="text-[10px] font-medium bg-primary-50 text-primary-700 px-1.5 py-0.5 rounded-full ml-1.5">
-            AI Planner
+
+        <div className="p-3 bg-[#F7F7F4] rounded-lg flex flex-col gap-0.5">
+          <span className="text-[11px] font-semibold text-[#747683] tracking-wider uppercase">
+            YOUR WORKSPACE
           </span>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-[#252735]">Fall 2026</span>
+            <ChevronDown className="w-3.5 h-3.5 text-[#747683]" />
+          </div>
         </div>
       </div>
 
-      {/* Navigation Links */}
-      <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+      {/* Main Navigation */}
+      <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
             <NavLink
               key={item.name}
               to={item.href}
+              end={item.href === "/"}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                   isActive
-                    ? "bg-primary-50 text-primary-700 font-semibold"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    ? "bg-[#EFEEF9] text-[#5553B7] font-semibold"
+                    : "text-[#747683] hover:bg-[#F7F7F4] hover:text-[#252735] font-medium"
                 }`
               }
             >
-              <Icon className="w-5 h-5 flex-shrink-0" />
+              <Icon className="w-[18px] h-[18px] flex-shrink-0" />
               <span>{item.name}</span>
             </NavLink>
           );
         })}
       </nav>
 
-      {/* User summary and logout */}
-      <div className="p-4 border-t border-slate-100 bg-slate-50/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 font-semibold flex items-center justify-center text-xs">
-              {user?.full_name?.charAt(0).toUpperCase() || "U"}
+      {/* Guidance box */}
+      <div className="p-3">
+        <div className="p-3.5 bg-[#EFEEF9] rounded-lg flex flex-col gap-1">
+          <p className="text-[13px] font-semibold text-[#5553B7]">A little planning, less pressure.</p>
+          <p className="text-xs text-[#747683] leading-relaxed">Leave room in your week for rest, too.</p>
+        </div>
+      </div>
+
+      {/* Profile & User Footer */}
+      <div className="p-3 pt-0 flex flex-col gap-3">
+        <NavLink
+          to="/profile"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+              isActive
+                ? "bg-[#EFEEF9] text-[#5553B7] font-semibold"
+                : "text-[#747683] hover:bg-[#F7F7F4] hover:text-[#252735]"
+            }`
+          }
+        >
+          <Settings2 className="w-[18px] h-[18px] flex-shrink-0" />
+          <span>Profile & settings</span>
+        </NavLink>
+
+        <div className="h-[1px] bg-[#E5E6EB] w-full" />
+
+        <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center gap-2.5 overflow-hidden">
+            <div className="w-[34px] h-[34px] rounded-full bg-[#EFEEF9] text-[#5553B7] font-semibold text-xs flex items-center justify-center flex-shrink-0">
+              {initials}
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-medium text-slate-900 truncate">
-                {user?.full_name || "Student"}
+              <p className="text-[13px] font-semibold text-[#252735] truncate">
+                {user?.full_name || "Alex Morgan"}
               </p>
-              <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+              <p className="text-[11px] text-[#747683] truncate">University student</p>
             </div>
           </div>
           <button
             onClick={logout}
             title="Log out"
-            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+            className="p-1.5 text-[#747683] hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors flex-shrink-0"
           >
             <LogOut className="w-4 h-4" />
           </button>

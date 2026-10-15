@@ -1,0 +1,86 @@
+import React from "react";
+import { Link } from "react-router-dom";
+import { Flag } from "lucide-react";
+import { Task, Course } from "@/types";
+import { CourseTag } from "@/components/common/CourseTag";
+import { PriorityBadge } from "@/components/common/PriorityBadge";
+
+interface ComingUpNextProps {
+  tasks: Task[];
+  courses: Course[];
+}
+
+export const ComingUpNext: React.FC<ComingUpNextProps> = ({ tasks, courses }) => {
+  const pendingTasks = tasks
+    .filter((t) => t.status !== "completed")
+    .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+    .slice(0, 4);
+
+  const formatDueDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const monthDay = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    return { monthDay, time };
+  };
+
+  return (
+    <div className="flex-1 p-6 bg-white border border-[#E5E6EB] rounded-xl flex flex-col gap-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-[#252735]">Coming up next</h3>
+        <Link
+          to="/tasks"
+          className="text-xs text-[#5553B7] hover:text-[#48469F] font-medium transition-colors"
+        >
+          View all tasks →
+        </Link>
+      </div>
+
+      <p className="text-[13px] text-[#747683] -mt-2">
+        Task deadlines, not study sessions
+      </p>
+
+      <div className="flex flex-col">
+        {pendingTasks.length === 0 ? (
+          <div className="p-8 text-center text-xs text-[#747683]">
+            No upcoming deadlines. Great job!
+          </div>
+        ) : (
+          pendingTasks.map((task, idx) => {
+            const course = courses.find((c) => c.id === task.course_id);
+            const { monthDay, time } = formatDueDate(task.due_date);
+
+            return (
+              <React.Fragment key={task.id}>
+                <div className="py-3.5 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <Flag className="w-4 h-4 text-[#747683] flex-shrink-0" />
+                    <div className="flex flex-col gap-1 overflow-hidden">
+                      <span className="text-[13px] text-[#252735] font-medium truncate">
+                        {task.title}
+                      </span>
+                      <CourseTag
+                        code={course?.code || "GENERAL"}
+                        color={course?.color || "#5553B7"}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 flex-shrink-0">
+                    <div className="flex flex-col text-right">
+                      <span className="text-xs font-semibold text-[#252735]">{monthDay}</span>
+                      <span className="text-[11px] text-[#747683]">{time}</span>
+                    </div>
+                    <PriorityBadge priority={task.priority} />
+                  </div>
+                </div>
+                {idx < pendingTasks.length - 1 && (
+                  <div className="h-[1px] bg-[#E5E6EB] w-full" />
+                )}
+              </React.Fragment>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+};

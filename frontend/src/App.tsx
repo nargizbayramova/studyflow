@@ -9,6 +9,7 @@ import { LoginPage } from "@/features/auth/LoginPage";
 import { RegisterPage } from "@/features/auth/RegisterPage";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { CoursesPage } from "@/features/courses/CoursesPage";
+import { CourseDetailPage } from "@/features/courses/CourseDetailPage";
 import { TasksPage } from "@/features/tasks/TasksPage";
 import { CalendarPage } from "@/features/calendar/CalendarPage";
 import { AvailabilityPage } from "@/features/availability/AvailabilityPage";
@@ -39,6 +40,7 @@ export const App: React.FC = () => {
               <Route element={<AppLayout />}>
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/courses" element={<CoursesPage />} />
+                <Route path="/courses/:id" element={<CourseDetailPage />} />
                 <Route path="/tasks" element={<TasksPage />} />
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/availability" element={<AvailabilityPage />} />
