@@ -3,7 +3,7 @@ from pydantic import AwareDatetime
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DbSession, Paging, apply_update, delete_owned, get_owned
-from app.models import BlockStatus, StudyBlock, Task
+from app.models import BlockStatus, Course, StudyBlock, Task
 from app.schemas.planner import StudyBlockCreate, StudyBlockRead, StudyBlockUpdate
 
 router = APIRouter(prefix="/study-blocks", tags=["Study Blocks"])
@@ -15,11 +15,14 @@ async def list_study_blocks(
     db: DbSession,
     page: Paging,
     task_id: int | None = None,
+    semester: str | None = None,
     status_: BlockStatus | None = Query(None, alias="status"),
     start_from: AwareDatetime | None = None,
     start_to: AwareDatetime | None = None,
 ) -> list[StudyBlock]:
     stmt = select(StudyBlock).where(StudyBlock.user_id == user.id)
+    if semester:
+        stmt = stmt.join(StudyBlock.task).join(Task.course).where(Course.semester == semester)
     if task_id is not None:
         stmt = stmt.where(StudyBlock.task_id == task_id)
     if status_ is not None:

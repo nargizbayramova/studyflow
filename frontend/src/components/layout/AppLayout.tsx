@@ -2,6 +2,8 @@ import React from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 
+import { useWorkspace } from "@/context/WorkspaceContext";
+
 const BREADCRUMBS: Record<string, string> = {
   "/": "Workspace / Overview",
   "/courses": "Workspace / Courses",
@@ -13,6 +15,7 @@ const BREADCRUMBS: Record<string, string> = {
 
 export const AppLayout: React.FC = () => {
   const location = useLocation();
+  const { workspace } = useWorkspace();
   const breadcrumb = BREADCRUMBS[location.pathname] || "Workspace";
 
   const formattedDate = new Intl.DateTimeFormat("en-US", {
@@ -32,7 +35,7 @@ export const AppLayout: React.FC = () => {
           <div className="flex items-center gap-3.5">
             <span className="text-[13px] text-[#747683]">{formattedDate}</span>
             <div className="w-[1px] h-5 bg-[#E5E6EB]" />
-            <span className="text-[13px] font-medium text-[#252735]">Fall 2026</span>
+            <span className="text-[13px] font-medium text-[#252735]">{workspace}</span>
           </div>
         </header>
 

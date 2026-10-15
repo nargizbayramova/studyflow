@@ -7,10 +7,10 @@ import {
   CalendarDays,
   Clock3,
   Settings2,
-  ChevronDown,
   LogOut,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { WorkspaceSelector } from "./WorkspaceSelector";
 
 const navItems = [
   { name: "Overview", href: "/", icon: LayoutDashboard },
@@ -42,15 +42,7 @@ export const Sidebar: React.FC = () => {
           <span className="font-bold text-xl text-[#252735] tracking-tight">StudyFlow</span>
         </div>
 
-        <div className="p-3 bg-[#F7F7F4] rounded-lg flex flex-col gap-0.5">
-          <span className="text-[11px] font-semibold text-[#747683] tracking-wider uppercase">
-            YOUR WORKSPACE
-          </span>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-[#252735]">Fall 2026</span>
-            <ChevronDown className="w-3.5 h-3.5 text-[#747683]" />
-          </div>
-        </div>
+        <WorkspaceSelector />
       </div>
 
       {/* Main Navigation */}

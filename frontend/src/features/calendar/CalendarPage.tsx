@@ -7,6 +7,7 @@ import {
 } from "@/api/studyBlocks";
 import { useTasks } from "@/api/tasks";
 import { useCourses } from "@/api/courses";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import { StudyBlock } from "@/types";
 import { CalendarHeader } from "./components/CalendarHeader";
 import { DayColumn } from "./components/DayColumn";
@@ -15,6 +16,7 @@ import { StudyBlockModal } from "./components/StudyBlockModal";
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export const CalendarPage: React.FC = () => {
+  const { workspace } = useWorkspace();
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
     const d = new Date();
     const day = d.getDay();
@@ -27,9 +29,9 @@ export const CalendarPage: React.FC = () => {
   const [selectedBlock, setSelectedBlock] = useState<StudyBlock | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const { data: blocks = [] } = useStudyBlocks();
-  const { data: tasks = [] } = useTasks();
-  const { data: courses = [] } = useCourses();
+  const { data: blocks = [] } = useStudyBlocks({ semester: workspace });
+  const { data: tasks = [] } = useTasks({ semester: workspace });
+  const { data: courses = [] } = useCourses({ semester: workspace });
 
   const createBlock = useCreateStudyBlock();
   const updateBlock = useUpdateStudyBlock();

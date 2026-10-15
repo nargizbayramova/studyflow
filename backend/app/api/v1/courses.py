@@ -44,6 +44,17 @@ async def create_course(body: CourseCreate, user: CurrentUser, db: DbSession) ->
     return course
 
 
+@router.get("/semesters", response_model=list[str], summary="List distinct semesters / workspaces")
+async def list_semesters(user: CurrentUser, db: DbSession) -> list[str]:
+    q = (
+        select(Course.semester)
+        .where(Course.user_id == user.id)
+        .distinct()
+        .order_by(Course.semester.desc())
+    )
+    return list(await db.scalars(q))
+
+
 @router.get("/{course_id}", response_model=CourseRead)
 async def get_course(course_id: int, user: CurrentUser, db: DbSession) -> Course:
     return await get_owned(db, Course, course_id, user.id)

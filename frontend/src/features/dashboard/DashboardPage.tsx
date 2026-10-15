@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import { useCourses } from "@/api/courses";
 import { useTasks } from "@/api/tasks";
 import { useStudyBlocks } from "@/api/studyBlocks";
@@ -14,9 +15,10 @@ import { CourseProgressPanel } from "./components/CourseProgressPanel";
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
-  const { data: courses = [], isLoading: loadingCourses } = useCourses();
-  const { data: tasks = [], isLoading: loadingTasks } = useTasks();
-  const { data: studyBlocks = [], isLoading: loadingBlocks } = useStudyBlocks();
+  const { workspace } = useWorkspace();
+  const { data: courses = [], isLoading: loadingCourses } = useCourses({ semester: workspace });
+  const { data: tasks = [], isLoading: loadingTasks } = useTasks({ semester: workspace });
+  const { data: studyBlocks = [], isLoading: loadingBlocks } = useStudyBlocks({ semester: workspace });
 
   if (loadingCourses || loadingTasks || loadingBlocks) {
     return (

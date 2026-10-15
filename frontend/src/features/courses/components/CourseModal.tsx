@@ -25,6 +25,7 @@ interface CourseModalProps {
     color: string;
   }) => Promise<void>;
   initialData?: Course | null;
+  defaultSemester?: string;
 }
 
 export const CourseModal: React.FC<CourseModalProps> = ({
@@ -32,11 +33,12 @@ export const CourseModal: React.FC<CourseModalProps> = ({
   onClose,
   onSubmit,
   initialData,
+  defaultSemester = "Fall 2026",
 }) => {
   const [code, setCode] = useState("");
   const [title, setTitle] = useState("");
   const [instructor, setInstructor] = useState("");
-  const [semester, setSemester] = useState("Fall 2026");
+  const [semester, setSemester] = useState(defaultSemester);
   const [color, setColor] = useState(FIGMA_COURSE_COLORS[0]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,11 +54,11 @@ export const CourseModal: React.FC<CourseModalProps> = ({
       setCode("");
       setTitle("");
       setInstructor("");
-      setSemester("Fall 2026");
+      setSemester(defaultSemester);
       setColor(FIGMA_COURSE_COLORS[0]);
     }
     setError(null);
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, defaultSemester]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

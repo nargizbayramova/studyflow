@@ -1,21 +1,24 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, ChevronDown, Archive, CheckSquare, Square } from "lucide-react";
+import { Plus, Archive, CheckSquare, Square } from "lucide-react";
 import { useCourses, useCreateCourse } from "@/api/courses";
 import { useTasks } from "@/api/tasks";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import { Spinner } from "@/components/common/Spinner";
 import { CourseCard } from "./components/CourseCard";
 import { CourseModal } from "./components/CourseModal";
 
 export const CoursesPage: React.FC = () => {
   const navigate = useNavigate();
+  const { workspace } = useWorkspace();
   const [includeArchived, setIncludeArchived] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { data: courses = [], isLoading: loadingCourses } = useCourses({
+    semester: workspace,
     include_archived: includeArchived,
   });
-  const { data: tasks = [], isLoading: loadingTasks } = useTasks();
+  const { data: tasks = [], isLoading: loadingTasks } = useTasks({ semester: workspace });
   const createCourse = useCreateCourse();
 
   if (loadingCourses || loadingTasks) {
@@ -51,10 +54,9 @@ export const CoursesPage: React.FC = () => {
       {/* Filters row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2.5">
-          <button className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white border border-[#E5E6EB] text-sm font-semibold text-[#252735] shadow-sm cursor-pointer">
-            <span>Fall 2026</span>
-            <ChevronDown className="w-4 h-4 text-[#747683]" />
-          </button>
+          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white border border-[#E5E6EB] text-sm font-semibold text-[#252735] shadow-sm">
+            <span>{workspace}</span>
+          </div>
           <span className="px-2.5 py-1 rounded-md bg-[#F7F7F4] text-xs font-medium text-[#747683]">
             {activeCourses.length} active {activeCourses.length === 1 ? "course" : "courses"}
           </span>
@@ -102,6 +104,7 @@ export const CoursesPage: React.FC = () => {
       <CourseModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        defaultSemester={workspace}
         onSubmit={async (data) => {
           await createCourse.mutateAsync(data);
         }}

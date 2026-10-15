@@ -29,6 +29,13 @@ export function useCourse(id: number) {
   });
 }
 
+export function useSemesters() {
+  return useQuery({
+    queryKey: [...courseKeys.all, "semesters"],
+    queryFn: () => apiClient<string[]>("/courses/semesters"),
+  });
+}
+
 export function useCreateCourse() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -24,6 +24,7 @@ async def list_tasks(
     db: DbSession,
     page: Paging,
     course_id: int | None = None,
+    semester: str | None = None,
     type_: TaskType | None = Query(None, alias="type"),
     status_: TaskStatus | None = Query(None, alias="status"),
     priority: TaskPriority | None = None,
@@ -32,6 +33,8 @@ async def list_tasks(
     q: str | None = Query(None, max_length=100, description="Case-insensitive title search"),
 ) -> list[Task]:
     stmt = select(Task).where(Task.user_id == user.id)
+    if semester:
+        stmt = stmt.join(Task.course).where(Course.semester == semester)
     if course_id is not None:
         stmt = stmt.where(Task.course_id == course_id)
     if type_ is not None:

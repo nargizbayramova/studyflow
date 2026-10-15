@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Plus } from "lucide-react";
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from "@/api/tasks";
 import { useCourses } from "@/api/courses";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import { Task, TaskPriority, TaskStatus, TaskType } from "@/types";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/common/Button";
@@ -11,8 +12,9 @@ import { TaskTable } from "./components/TaskTable";
 import { TaskModal } from "./components/TaskModal";
 
 export const TasksPage: React.FC = () => {
-  const { data: tasks = [] } = useTasks();
-  const { data: courses = [] } = useCourses();
+  const { workspace } = useWorkspace();
+  const { data: tasks = [] } = useTasks({ semester: workspace });
+  const { data: courses = [] } = useCourses({ semester: workspace });
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();

@@ -86,12 +86,21 @@ export interface TaskUpdatePayload {
 
 export interface TaskFilters {
   course_id?: number;
+  semester?: string;
   type?: TaskType;
   status?: TaskStatus;
   priority?: TaskPriority;
   due_from?: string;
   due_to?: string;
   q?: string;
+}
+
+export interface StudyBlockFilters {
+  task_id?: number;
+  semester?: string;
+  status?: BlockStatus;
+  start_from?: string;
+  start_to?: string;
 }
 
 export type SlotKind = "available" | "blocked";
