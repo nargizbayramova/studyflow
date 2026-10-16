@@ -206,3 +206,75 @@ def test_study_block_read_with_joined_task_and_course():
     assert read.course_name == "Data Structures"
 
 
+@pytest.mark.anyio
+async def test_generate_schedule_endpoint(monkeypatch):
+    from unittest.mock import AsyncMock, MagicMock
+    from app.api.v1 import schedule as schedule_api
+    from app.schemas.schedule import AIGeneratedSchedule, AIStudyBlockItem
+
+    paths = app.openapi()["paths"]
+    assert "/api/v1/schedule" in paths
+    assert "/api/v1/schedule/generate" in paths
+
+    mock_course = MagicMock(code="CS101", color="#4F46E5", title="Intro CS")
+    mock_task = MagicMock(
+        id=42,
+        title="Midterm Prep",
+        due_date=datetime.now(UTC) + timedelta(days=3),
+        estimated_hours=2.0,
+        weight_percent=25.0,
+        course=mock_course,
+    )
+    mock_slot = MagicMock(day_of_week=0, start_time=time(9, 0), end_time=time(11, 0))
+
+    scalars_calls = [[mock_task], [mock_slot]]
+
+    class FakeScalarResult:
+        def __init__(self, items):
+            self._items = items
+
+        def unique(self):
+            return self._items
+
+        def __iter__(self):
+            return iter(self._items)
+
+    mock_db = MagicMock()
+    mock_db.scalars = AsyncMock(side_effect=lambda _: FakeScalarResult(scalars_calls.pop(0)))
+    mock_db.execute = AsyncMock()
+    mock_db.flush = AsyncMock()
+    mock_db.commit = AsyncMock()
+
+    def _assign_id(obj):
+        obj.id = 99
+
+    mock_db.add = MagicMock(side_effect=_assign_id)
+
+    fake_ai_result = AIGeneratedSchedule(
+        study_blocks=[
+            AIStudyBlockItem(
+                task_id=42,
+                date="2026-10-19",
+                start_time="09:00",
+                end_time="10:30",
+                focus_goal="Review lecture notes",
+            )
+        ],
+        overload_warning=True,
+    )
+    monkeypatch.setattr(
+        schedule_api, "generate_structured", AsyncMock(return_value=fake_ai_result)
+    )
+
+    mock_user = MagicMock(id=7)
+    res = await schedule_api.generate_schedule(user=mock_user, db=mock_db, semester="Fall 2026")
+    assert res.overload_warning is True
+    assert len(res.study_blocks) == 1
+    out = res.study_blocks[0]
+    assert out.id == 99
+    assert out.task_id == 42
+    assert out.task_title == "Midterm Prep"
+    assert out.course_code == "CS101"
+    assert out.course_color == "#4F46E5"
+    assert out.focus_goal == "Review lecture notes"
+    assert out.status == "planned"

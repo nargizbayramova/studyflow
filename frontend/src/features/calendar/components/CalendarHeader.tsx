@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, ChevronLeft, ChevronRight, Calendar, LayoutList, Grid3X3 } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Calendar, LayoutList, Grid3X3, Sparkles } from "lucide-react";
 import { CalendarViewMode, formatCalendarTitle } from "../calendarUtils";
 
 export type { CalendarViewMode };
@@ -25,6 +25,8 @@ interface CalendarHeaderProps {
   onNext: () => void;
   onToday: () => void;
   onAddBlock: () => void;
+  onGenerateSchedule: () => void;
+  isGenerating: boolean;
   totalScheduledHours: number;
 }
 
@@ -37,6 +39,8 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   onNext,
   onToday,
   onAddBlock,
+  onGenerateSchedule,
+  isGenerating,
   totalScheduledHours,
 }) => {
   return (
@@ -49,13 +53,24 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={onAddBlock}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#5553B7] hover:bg-[#48469F] text-white text-sm font-semibold transition-colors shadow-sm self-start sm:self-auto cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Schedule session</span>
-        </button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <button
+            onClick={onGenerateSchedule}
+            disabled={isGenerating}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#5553B7] bg-[#EFEEF9] hover:bg-[#E2E0F5] disabled:opacity-60 text-[#5553B7] text-sm font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>{isGenerating ? "Generating..." : "Generate AI Schedule"}</span>
+          </button>
+
+          <button
+            onClick={onAddBlock}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#5553B7] hover:bg-[#48469F] text-white text-sm font-semibold transition-colors shadow-sm cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Schedule session</span>
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-3.5 px-5 border border-[#E5E6EB] rounded-xl shadow-sm">

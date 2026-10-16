@@ -38,6 +38,7 @@ export function useCreateStudyBlock() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: studyBlockKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ["schedule"] });
     },
   });
 }
@@ -53,6 +54,7 @@ export function useUpdateStudyBlock() {
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: studyBlockKeys.lists() });
       queryClient.invalidateQueries({ queryKey: studyBlockKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: ["schedule"] });
     },
   });
 }
@@ -66,6 +68,7 @@ export function useDeleteStudyBlock() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: studyBlockKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ["schedule"] });
     },
   });
 }

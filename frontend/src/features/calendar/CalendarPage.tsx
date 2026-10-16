@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { useStudyBlocks } from "@/api/studyBlocks";
-import { useWorkspace } from "@/context/WorkspaceContext";
+import { AlertTriangle } from "lucide-react";
+import { useSchedule } from "@/hooks/useSchedule";
 import { StudyBlock } from "@/types";
 import { CalendarHeader, CalendarViewMode } from "./components/CalendarHeader";
 import { WeekView } from "./components/WeekView";
@@ -16,14 +16,12 @@ import {
 } from "./calendarUtils";
 
 export const CalendarPage: React.FC = () => {
-  const { workspace } = useWorkspace();
+  const { blocks, overloadWarning, isGenerating, error, generateSchedule } = useSchedule();
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   const [viewMode, setViewMode] = useState<CalendarViewMode>("week");
   const [selectedBlock, setSelectedBlock] = useState<StudyBlock | null>(null);
   const [initialSlot, setInitialSlot] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const { data: blocks = [] } = useStudyBlocks({ semester: workspace });
 
   const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate]);
   const blocksByDate = useMemo(() => groupBlocksByDate(blocks), [blocks]);
@@ -61,8 +59,25 @@ export const CalendarPage: React.FC = () => {
         onNext={() => setCurrentDate((d) => shiftCalendarDate(d, viewMode, 1))}
         onToday={() => setCurrentDate(new Date())}
         onAddBlock={() => openCreateModal()}
+        onGenerateSchedule={() => void generateSchedule()}
+        isGenerating={isGenerating}
         totalScheduledHours={totalScheduledHours}
       />
+
+      {overloadWarning && (
+        <div className="flex items-center gap-3 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-medium">
+          <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+          <span>
+            Overload warning: Your pending tasks require more study hours than your available weekly slots before their deadlines. Consider extending your availability or adjusting task estimates.
+          </span>
+        </div>
+      )}
+
+      {error && (
+        <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+          {error}
+        </div>
+      )}
 
       {viewMode === "week" && (
         <WeekView
