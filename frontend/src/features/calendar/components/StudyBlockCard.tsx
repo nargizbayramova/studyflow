@@ -15,7 +15,9 @@ export const StudyBlockCard: React.FC<StudyBlockCardProps> = ({
   course,
   onClick,
 }) => {
-  const color = course?.color || "#5553B7";
+  const color = block.course_color || course?.color || "#5553B7";
+  const code = block.course_code || course?.code || "GENERAL";
+  const title = block.task_title || task?.title || "Focus Session";
 
   const formatTime = (iso: string) => {
     return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
@@ -46,11 +48,11 @@ export const StudyBlockCard: React.FC<StudyBlockCardProps> = ({
       </div>
 
       <span className="text-xs font-semibold text-[#252735] line-clamp-2">
-        {task?.title || "Focus Session"}
+        {title}
       </span>
 
       <div className="pt-0.5">
-        <CourseTag code={course?.code || "GENERAL"} color={color} />
+        <CourseTag code={code} color={color} />
       </div>
     </button>
   );

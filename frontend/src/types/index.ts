@@ -135,6 +135,10 @@ export interface StudyBlock {
   start_at: string;
   end_at: string;
   status: BlockStatus;
+  task_title?: string | null;
+  course_name?: string | null;
+  course_code?: string | null;
+  course_color?: string | null;
   created_at: string;
   updated_at: string;
 }

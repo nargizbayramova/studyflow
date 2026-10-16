@@ -10,13 +10,14 @@ export const taskKeys = {
   detail: (id: number) => [...taskKeys.details(), id] as const,
 };
 
-export function useTasks(filters?: TaskFilters) {
+export function useTasks(filters?: TaskFilters, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: taskKeys.list(filters),
     queryFn: () =>
       apiClient<Task[]>("/tasks", {
         params: filters as Record<string, string | number | boolean>,
       }),
+    enabled: options?.enabled,
   });
 }
 

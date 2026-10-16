@@ -37,3 +37,19 @@ class StudyBlock(TimestampMixin, Base):
 
     user: Mapped["User"] = relationship(back_populates="study_blocks")
     task: Mapped["Task"] = relationship(back_populates="study_blocks")
+
+    @property
+    def task_title(self) -> str | None:
+        return self.task.title if self.task else None
+
+    @property
+    def course_code(self) -> str | None:
+        return self.task.course.code if self.task and self.task.course else None
+
+    @property
+    def course_color(self) -> str | None:
+        return self.task.course.color if self.task and self.task.course else None
+
+    @property
+    def course_name(self) -> str | None:
+        return self.task.course.title if self.task and self.task.course else None

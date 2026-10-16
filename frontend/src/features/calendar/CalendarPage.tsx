@@ -23,9 +23,18 @@ export const CalendarPage: React.FC = () => {
   const [initialSlot, setInitialSlot] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const isCreatingBlock = isModalOpen && !selectedBlock;
+  const isDayView = viewMode === "day";
+
   const { data: blocks = [] } = useStudyBlocks({ semester: workspace });
-  const { data: tasks = [] } = useTasks({ semester: workspace });
-  const { data: courses = [] } = useCourses({ semester: workspace });
+  const { data: tasks = [] } = useTasks(
+    { semester: workspace },
+    { enabled: isCreatingBlock || isDayView }
+  );
+  const { data: courses = [] } = useCourses(
+    { semester: workspace },
+    { enabled: isDayView }
+  );
 
   const createBlock = useCreateStudyBlock();
   const updateBlock = useUpdateStudyBlock();
@@ -128,8 +137,6 @@ export const CalendarPage: React.FC = () => {
         <WeekView
           weekDays={weekDays}
           blocks={blocks}
-          tasks={tasks}
-          courses={courses}
           onSelectBlock={handleSelectBlock}
           onSelectSlot={(slot) => handleOpenAddModal(slot)}
         />
@@ -150,8 +157,6 @@ export const CalendarPage: React.FC = () => {
         <MonthView
           currentDate={currentDate}
           blocks={blocks}
-          tasks={tasks}
-          courses={courses}
           onSelectBlock={handleSelectBlock}
           onSelectSlot={(slot) => handleOpenAddModal(slot)}
         />
@@ -167,7 +172,6 @@ export const CalendarPage: React.FC = () => {
         block={selectedBlock}
         initialSlot={initialSlot}
         tasks={tasks}
-        courses={courses}
         onCreate={async (data) => {
           await createBlock.mutateAsync(data);
         }}

@@ -116,9 +116,11 @@ export const DayView: React.FC<DayViewProps> = ({
               const top = Math.max(0, (startHour - 8) * HOUR_HEIGHT);
               const height = Math.max(34, (endHour - startHour) * HOUR_HEIGHT - 3);
 
-              const task = tasks.find((t) => t.id === b.task_id);
-              const course = courses.find((c) => c.id === task?.course_id);
-              const color = course?.color || "#5553B7";
+              const task = b.task_title ? undefined : tasks.find((t) => t.id === b.task_id);
+              const course = b.course_code && b.course_color ? undefined : courses.find((c) => c.id === task?.course_id);
+              const color = b.course_color || course?.color || "#5553B7";
+              const code = b.course_code || course?.code || "STUDY";
+              const title = b.task_title || task?.title || "Study Session";
               const isCompleted = b.status === "completed";
 
               const formatTime = (d: Date) =>
@@ -145,10 +147,10 @@ export const DayView: React.FC<DayViewProps> = ({
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <CourseTag code={course?.code || "STUDY"} color={color} />
+                    <CourseTag code={code} color={color} />
                     <div className="flex flex-col min-w-0">
                       <span className="text-xs font-bold text-[#252735] truncate">
-                        {task?.title || "Study Session"}
+                        {title}
                       </span>
                       <span className="text-[11px] text-[#747683]">
                         {formatTime(bStart)} – {formatTime(bEnd)} &bull; {b.status}

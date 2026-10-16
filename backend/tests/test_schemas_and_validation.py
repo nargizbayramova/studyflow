@@ -180,3 +180,29 @@ def test_cors_middleware_strict_origins():
     )
     assert res_blocked.headers.get("access-control-allow-origin") is None
 
+
+def test_study_block_read_with_joined_task_and_course():
+    from unittest.mock import MagicMock
+    from app.schemas.planner import StudyBlockRead
+
+    now = datetime.now(UTC)
+    mock_block = MagicMock()
+    mock_block.id = 1
+    mock_block.task_id = 10
+    mock_block.start_at = now
+    mock_block.end_at = now + timedelta(hours=1)
+    mock_block.status = BlockStatus.PLANNED
+    mock_block.created_at = now
+    mock_block.updated_at = now
+    mock_block.task_title = "Final Project"
+    mock_block.course_code = "CS 201"
+    mock_block.course_color = "#5553B7"
+    mock_block.course_name = "Data Structures"
+
+    read = StudyBlockRead.model_validate(mock_block)
+    assert read.task_title == "Final Project"
+    assert read.course_code == "CS 201"
+    assert read.course_color == "#5553B7"
+    assert read.course_name == "Data Structures"
+
+

@@ -1,5 +1,5 @@
 import React from "react";
-import { StudyBlock, Task, Course } from "@/types";
+import { StudyBlock } from "@/types";
 import { CourseTag } from "@/components/common/CourseTag";
 import { CheckCircle2 } from "lucide-react";
 
@@ -9,8 +9,6 @@ const HOUR_HEIGHT = 60; // 60px per hour => 1px per minute
 interface WeekViewProps {
   weekDays: Date[];
   blocks: StudyBlock[];
-  tasks: Task[];
-  courses: Course[];
   onSelectBlock: (block: StudyBlock) => void;
   onSelectSlot: (date: Date) => void;
 }
@@ -18,8 +16,6 @@ interface WeekViewProps {
 export const WeekView: React.FC<WeekViewProps> = ({
   weekDays,
   blocks,
-  tasks,
-  courses,
   onSelectBlock,
   onSelectSlot,
 }) => {
@@ -153,9 +149,9 @@ export const WeekView: React.FC<WeekViewProps> = ({
                 const top = Math.max(0, (startHour - 8) * HOUR_HEIGHT);
                 const height = Math.max(28, (endHour - startHour) * HOUR_HEIGHT - 3);
 
-                const task = tasks.find((t) => t.id === b.task_id);
-                const course = courses.find((c) => c.id === task?.course_id);
-                const color = course?.color || "#5553B7";
+                const color = b.course_color || "#5553B7";
+                const code = b.course_code || "STUDY";
+                const title = b.task_title || "Study Session";
                 const isCompleted = b.status === "completed";
 
                 const formatTime = (d: Date) =>
@@ -182,7 +178,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
                     }`}
                   >
                     <div className="flex items-center justify-between gap-1 leading-none">
-                      <CourseTag code={course?.code || "STUDY"} color={color} />
+                      <CourseTag code={code} color={color} />
                       <span className="text-[10px] font-medium text-[#747683]">
                         {formatTime(bStart)}–{formatTime(bEnd)}
                       </span>
@@ -190,7 +186,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
 
                     <div className="flex items-center justify-between gap-1 mt-0.5">
                       <span className="text-[11px] font-bold text-[#252735] truncate">
-                        {task?.title || "Study Session"}
+                        {title}
                       </span>
                       {isCompleted && (
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />

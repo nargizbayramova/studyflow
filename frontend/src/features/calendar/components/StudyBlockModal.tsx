@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { StudyBlock, Task, Course, BlockStatus } from "@/types";
+import { StudyBlock, Task, BlockStatus } from "@/types";
 import { Modal } from "@/components/common/Modal";
 import { Input } from "@/components/common/Input";
 import { Button } from "@/components/common/Button";
@@ -10,8 +10,7 @@ interface StudyBlockModalProps {
   onClose: () => void;
   block?: StudyBlock | null;
   initialSlot?: Date | null;
-  tasks: Task[];
-  courses: Course[];
+  tasks?: Task[];
   onCreate: (data: { task_id: number; start_at: string; end_at: string }) => Promise<void>;
   onUpdate: (id: number, data: { start_at?: string; end_at?: string; status?: BlockStatus }) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
@@ -32,8 +31,7 @@ export const StudyBlockModal: React.FC<StudyBlockModalProps> = ({
   onClose,
   block,
   initialSlot,
-  tasks,
-  courses,
+  tasks = [],
   onCreate,
   onUpdate,
   onDelete,
@@ -86,7 +84,9 @@ export const StudyBlockModal: React.FC<StudyBlockModalProps> = ({
   };
 
   const currentTask = tasks.find((t) => t.id === (block ? block.task_id : taskId));
-  const currentCourse = courses.find((c) => c.id === currentTask?.course_id);
+  const blockTitle = block?.task_title || currentTask?.title || "Focus Study Session";
+  const blockCode = block?.course_code || "GENERAL";
+  const blockColor = block?.course_color || "#5553B7";
 
   return (
     <Modal
@@ -104,12 +104,12 @@ export const StudyBlockModal: React.FC<StudyBlockModalProps> = ({
         {block ? (
           <div className="p-3.5 bg-[#F7F7F4] rounded-lg flex flex-col gap-2">
             <span className="text-sm font-semibold text-[#252735]">
-              {currentTask?.title || "Focus Study Session"}
+              {blockTitle}
             </span>
             <div className="flex items-center justify-between">
               <CourseTag
-                code={currentCourse?.code || "GENERAL"}
-                color={currentCourse?.color || "#5553B7"}
+                code={blockCode}
+                color={blockColor}
               />
               <span className="text-xs px-2 py-0.5 rounded-md bg-[#EFEEF9] text-[#5553B7] font-medium capitalize">
                 {block.status}

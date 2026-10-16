@@ -184,5 +184,9 @@ class StudyBlockRead(ORM):
     start_at: datetime
     end_at: datetime
     status: BlockStatus
+    task_title: str | None = None
+    course_code: str | None = None
+    course_color: str | None = None
+    course_name: str | None = None
     created_at: datetime
     updated_at: datetime

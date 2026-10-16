@@ -69,9 +69,11 @@ export const TodayStudyPlan: React.FC<TodayStudyPlanProps> = ({
           </div>
         ) : (
           todayBlocks.slice(0, 3).map((block) => {
-            const task = tasks.find((t) => t.id === block.task_id);
-            const course = courses.find((c) => c.id === task?.course_id);
-            const color = course?.color || "#5553B7";
+            const task = block.task_title ? undefined : tasks.find((t) => t.id === block.task_id);
+            const course = block.course_code && block.course_color ? undefined : courses.find((c) => c.id === task?.course_id);
+            const color = block.course_color || course?.color || "#5553B7";
+            const code = block.course_code || course?.code || "GENERAL";
+            const title = block.task_title || task?.title || "Focus Study Session";
 
             return (
               <div
@@ -89,10 +91,10 @@ export const TodayStudyPlan: React.FC<TodayStudyPlanProps> = ({
                   <Clock3 className="w-3.5 h-3.5 text-[#747683]" />
                 </div>
                 <h4 className="text-sm font-semibold text-[#252735] line-clamp-1">
-                  {task?.title || "Focus Study Session"}
+                  {title}
                 </h4>
                 <div className="flex items-center justify-between text-xs pt-0.5">
-                  <CourseTag code={course?.code || "GENERAL"} color={color} />
+                  <CourseTag code={code} color={color} />
                   <span className="text-[11px] text-[#747683]">
                     {getDurationHours(block.start_at, block.end_at)} · Scheduled
                   </span>

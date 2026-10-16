@@ -1,13 +1,11 @@
 import React from "react";
-import { StudyBlock, Task, Course } from "@/types";
+import { StudyBlock } from "@/types";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 interface MonthViewProps {
   currentDate: Date;
   blocks: StudyBlock[];
-  tasks: Task[];
-  courses: Course[];
   onSelectBlock: (block: StudyBlock) => void;
   onSelectSlot: (date: Date) => void;
 }
@@ -15,8 +13,6 @@ interface MonthViewProps {
 export const MonthView: React.FC<MonthViewProps> = ({
   currentDate,
   blocks,
-  tasks,
-  courses,
   onSelectBlock,
   onSelectSlot,
 }) => {
@@ -126,9 +122,9 @@ export const MonthView: React.FC<MonthViewProps> = ({
               {/* Study block pills */}
               <div className="flex flex-col gap-1 mt-1.5 overflow-hidden">
                 {dayBlocks.slice(0, 2).map((b) => {
-                  const task = tasks.find((t) => t.id === b.task_id);
-                  const course = courses.find((c) => c.id === task?.course_id);
-                  const color = course?.color || "#5553B7";
+                  const color = b.course_color || "#5553B7";
+                  const code = b.course_code;
+                  const title = b.task_title || "Session";
 
                   return (
                     <button
@@ -144,8 +140,8 @@ export const MonthView: React.FC<MonthViewProps> = ({
                       }}
                       className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-[#252735] text-left truncate hover:opacity-85 transition-opacity"
                     >
-                      <span className="opacity-75 mr-1 font-bold">{course?.code}</span>
-                      <span>{task?.title || "Session"}</span>
+                      {code && <span className="opacity-75 mr-1 font-bold">{code}</span>}
+                      <span>{title}</span>
                     </button>
                   );
                 })}

@@ -11,13 +11,17 @@ export const courseKeys = {
   detail: (id: number) => [...courseKeys.details(), id] as const,
 };
 
-export function useCourses(filters?: { semester?: string; include_archived?: boolean }) {
+export function useCourses(
+  filters?: { semester?: string; include_archived?: boolean },
+  options?: { enabled?: boolean }
+) {
   return useQuery({
     queryKey: courseKeys.list(filters),
     queryFn: () =>
       apiClient<Course[]>("/courses", {
         params: filters,
       }),
+    enabled: options?.enabled,
   });
 }
 

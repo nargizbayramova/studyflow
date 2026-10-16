@@ -1,12 +1,25 @@
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import AwareDatetime
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 from app.api.deps import CurrentUser, DbSession, Paging, apply_update, delete_owned, get_owned
 from app.models import BlockStatus, Course, StudyBlock, Task
 from app.schemas.planner import StudyBlockCreate, StudyBlockRead, StudyBlockUpdate
 
 router = APIRouter(prefix="/study-blocks", tags=["Study Blocks"])
+
+
+async def _get_block_with_details(db: DbSession, block_id: int, user_id: int) -> StudyBlock:
+    stmt = (
+        select(StudyBlock)
+        .options(joinedload(StudyBlock.task).joinedload(Task.course))
+        .where(StudyBlock.id == block_id, StudyBlock.user_id == user_id)
+    )
+    block = (await db.scalars(stmt)).unique().first()
+    if block is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "StudyBlock not found")
+    return block
 
 
 @router.get("", response_model=list[StudyBlockRead], summary="List / filter study blocks (FR-09, FR-10)")
@@ -20,7 +33,11 @@ async def list_study_blocks(
     start_from: AwareDatetime | None = None,
     start_to: AwareDatetime | None = None,
 ) -> list[StudyBlock]:
-    stmt = select(StudyBlock).where(StudyBlock.user_id == user.id)
+    stmt = (
+        select(StudyBlock)
+        .options(joinedload(StudyBlock.task).joinedload(Task.course))
+        .where(StudyBlock.user_id == user.id)
+    )
     if semester:
         stmt = stmt.join(StudyBlock.task).join(Task.course).where(Course.semester == semester)
     if task_id is not None:
@@ -32,7 +49,7 @@ async def list_study_blocks(
     if start_to is not None:
         stmt = stmt.where(StudyBlock.start_at <= start_to)
     stmt = stmt.order_by(StudyBlock.start_at, StudyBlock.id).limit(page.limit).offset(page.offset)
-    return list(await db.scalars(stmt))
+    return list((await db.scalars(stmt)).unique())
 
 
 @router.post("", response_model=StudyBlockRead, status_code=status.HTTP_201_CREATED)
@@ -43,12 +60,12 @@ async def create_study_block(
     block = StudyBlock(**body.model_dump(), user_id=user.id)
     db.add(block)
     await db.commit()
-    return block
+    return await _get_block_with_details(db, block.id, user.id)
 
 
 @router.get("/{block_id}", response_model=StudyBlockRead)
 async def get_study_block(block_id: int, user: CurrentUser, db: DbSession) -> StudyBlock:
-    return await get_owned(db, StudyBlock, block_id, user.id)
+    return await _get_block_with_details(db, block_id, user.id)
 
 
 @router.patch("/{block_id}", response_model=StudyBlockRead)
@@ -64,7 +81,7 @@ async def update_study_block(
         raise HTTPException(422, "end_at must be after start_at")
     apply_update(block, body)
     await db.commit()
-    return block
+    return await _get_block_with_details(db, block.id, user.id)
 
 
 @router.delete("/{block_id}", status_code=status.HTTP_204_NO_CONTENT)
