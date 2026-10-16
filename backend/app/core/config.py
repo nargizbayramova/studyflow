@@ -33,15 +33,22 @@ class Settings(BaseSettings):
     @field_validator("CORS_ORIGINS", mode="after")
     @classmethod
     def assemble_cors_origins(cls, v: list[str] | str) -> list[str]:
+        raw: list[str] = []
         if isinstance(v, str):
-            if v.startswith("["):
+            if v.strip().startswith("["):
                 try:
                     import json
-                    return json.loads(v)
+
+                    parsed = json.loads(v)
+                    if isinstance(parsed, list):
+                        raw = parsed
                 except Exception:
                     pass
-            return [i.strip() for i in v.split(",") if i.strip()]
-        return v
+            if not raw:
+                raw = [i.strip() for i in v.split(",") if i.strip()]
+        elif isinstance(v, list):
+            raw = v
+        return [o.strip().strip("'\"").rstrip("/") for o in raw if isinstance(o, str) and o.strip()]
 
     # External services (used in later phases)
     OPENAI_API_KEY: str | None = None

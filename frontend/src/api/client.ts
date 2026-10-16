@@ -1,5 +1,5 @@
 const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/+$/, "");
-const API_PREFIX = `${API_BASE}/api/v1`;
+const API_PREFIX = API_BASE.endsWith("/api/v1") ? API_BASE : `${API_BASE}/api/v1`;
 
 export class ApiError extends Error {
   status: number;

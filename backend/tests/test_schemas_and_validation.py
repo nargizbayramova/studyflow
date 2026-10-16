@@ -143,3 +143,40 @@ def test_routes_registered():
     assert "patch" in paths["/api/v1/study-blocks/{block_id}"]
     assert "delete" in paths["/api/v1/study-blocks/{block_id}"]
     assert "/api/v1/health" in paths
+
+
+def test_cors_origins_sanitization():
+    from app.core.config import Settings
+
+    s1 = Settings(CORS_ORIGINS="https://studyflow-two-pied.vercel.app/")
+    assert s1.CORS_ORIGINS == ["https://studyflow-two-pied.vercel.app"]
+
+    s2 = Settings(CORS_ORIGINS='"https://studyflow-two-pied.vercel.app/", "http://localhost:5173"')
+    assert "https://studyflow-two-pied.vercel.app" in s2.CORS_ORIGINS
+    assert "http://localhost:5173" in s2.CORS_ORIGINS
+
+
+def test_cors_middleware_strict_origins():
+    from starlette.testclient import TestClient
+
+    client = TestClient(app)
+    # Whitelisted origin allowed
+    res_allowed = client.options(
+        "/api/v1/health",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert res_allowed.headers.get("access-control-allow-origin") == "http://localhost:5173"
+
+    # Random origin rejected
+    res_blocked = client.options(
+        "/api/v1/health",
+        headers={
+            "Origin": "https://malicious-site.vercel.app",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert res_blocked.headers.get("access-control-allow-origin") is None
+
