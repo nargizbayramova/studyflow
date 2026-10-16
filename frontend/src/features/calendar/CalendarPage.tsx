@@ -7,6 +7,7 @@ import { WeekView } from "./components/WeekView";
 import { DayView } from "./components/DayView";
 import { MonthView } from "./components/MonthView";
 import { StudyBlockModal } from "./components/StudyBlockModal";
+import { AIScheduleResultModal } from "./components/AIScheduleResultModal";
 import {
   getViewScheduledHours,
   getWeekDays,
@@ -16,7 +17,15 @@ import {
 } from "./calendarUtils";
 
 export const CalendarPage: React.FC = () => {
-  const { blocks, overloadWarning, isGenerating, error, generateSchedule } = useSchedule();
+  const {
+    blocks,
+    overloadWarning,
+    lastGenerated,
+    clearLastGenerated,
+    isGenerating,
+    error,
+    generateSchedule,
+  } = useSchedule();
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   const [viewMode, setViewMode] = useState<CalendarViewMode>("week");
   const [selectedBlock, setSelectedBlock] = useState<StudyBlock | null>(null);
@@ -112,6 +121,8 @@ export const CalendarPage: React.FC = () => {
         block={selectedBlock}
         initialSlot={initialSlot}
       />
+
+      <AIScheduleResultModal result={lastGenerated} onClose={clearLastGenerated} />
     </div>
   );
 };

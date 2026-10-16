@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from app.core.config import settings
 
-MODEL_ID = os.getenv("GEMINI_MODEL", settings.GEMINI_MODEL or "gemini-3.1-flash-lite-preview")
+MODEL_ID = os.getenv("GEMINI_MODEL", settings.GEMINI_MODEL or "gemini-3.1-flash-lite")
 
 T = TypeVar("T", bound=BaseModel)
 

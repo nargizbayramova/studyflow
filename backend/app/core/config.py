@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     # External services (used in later phases)
     OPENAI_API_KEY: str | None = None
     GEMINI_API_KEY: str | None = None
-    GEMINI_MODEL: str = "gemini-3.1-flash-lite-preview"
+    GEMINI_MODEL: str = "gemini-3.1-flash-lite"
     TELEGRAM_BOT_TOKEN: str | None = None
     TELEGRAM_CHAT_ID: str | None = None
 

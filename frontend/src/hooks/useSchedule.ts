@@ -14,6 +14,7 @@ export function useSchedule() {
   const { workspace } = useWorkspace();
   const queryClient = useQueryClient();
   const [overloadWarning, setOverloadWarning] = useState(false);
+  const [lastGenerated, setLastGenerated] = useState<ScheduleResponse | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const scheduleQuery = useQuery({
@@ -33,6 +34,7 @@ export function useSchedule() {
     onMutate: () => setActionError(null),
     onSuccess: (data) => {
       setOverloadWarning(data.overload_warning);
+      setLastGenerated(data);
       queryClient.setQueryData(scheduleKeys.bySemester(workspace), data);
       queryClient.invalidateQueries({ queryKey: studyBlockKeys.lists() });
     },
@@ -67,6 +69,8 @@ export function useSchedule() {
   return {
     blocks: scheduleQuery.data?.study_blocks ?? [],
     overloadWarning: overloadWarning || (scheduleQuery.data?.overload_warning ?? false),
+    lastGenerated,
+    clearLastGenerated: () => setLastGenerated(null),
     isGenerating: generateMutation.isPending,
     error: actionError || queryError,
     fetchSchedule: scheduleQuery.refetch,
