@@ -1,71 +1,26 @@
 import React from "react";
 import { StudyBlock } from "@/types";
-
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+import { getMonthGridDays, isToday, toDateKey, WEEKDAY_LABELS } from "../calendarUtils";
 
 interface MonthViewProps {
   currentDate: Date;
-  blocks: StudyBlock[];
+  blocksByDate: Map<string, StudyBlock[]>;
   onSelectBlock: (block: StudyBlock) => void;
   onSelectSlot: (date: Date) => void;
 }
 
 export const MonthView: React.FC<MonthViewProps> = ({
   currentDate,
-  blocks,
+  blocksByDate,
   onSelectBlock,
   onSelectSlot,
 }) => {
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-
-  const firstDayOfMonth = new Date(year, month, 1);
-  const lastDayOfMonth = new Date(year, month + 1, 0);
-
-  // Day of week index (0 = Monday, ..., 6 = Sunday)
-  const startDayOfWeek = (firstDayOfMonth.getDay() + 6) % 7;
-  const daysInMonth = lastDayOfMonth.getDate();
-
-  const calendarDays: { date: Date; isCurrentMonth: boolean }[] = [];
-
-  // Previous month trailing days
-  for (let i = startDayOfWeek - 1; i >= 0; i--) {
-    calendarDays.push({
-      date: new Date(year, month, -i),
-      isCurrentMonth: false,
-    });
-  }
-
-  // Current month days
-  for (let i = 1; i <= daysInMonth; i++) {
-    calendarDays.push({
-      date: new Date(year, month, i),
-      isCurrentMonth: true,
-    });
-  }
-
-  // Next month leading days to complete the 7-col grid
-  const remaining = 7 - (calendarDays.length % 7);
-  if (remaining < 7) {
-    for (let i = 1; i <= remaining; i++) {
-      calendarDays.push({
-        date: new Date(year, month + 1, i),
-        isCurrentMonth: false,
-      });
-    }
-  }
-
-  const now = new Date();
-  const isToday = (d: Date) =>
-    d.getDate() === now.getDate() &&
-    d.getMonth() === now.getMonth() &&
-    d.getFullYear() === now.getFullYear();
+  const calendarDays = getMonthGridDays(currentDate);
 
   return (
     <div className="bg-white border border-[#E5E6EB] rounded-xl shadow-sm overflow-hidden flex flex-col">
-      {/* Weekday Header */}
       <div className="grid grid-cols-7 border-b border-[#E5E6EB] bg-[#F7F7F4]/70">
-        {WEEKDAYS.map((day) => (
+        {WEEKDAY_LABELS.map((day) => (
           <div
             key={day}
             className="p-3 text-center text-xs font-semibold text-[#747683] uppercase tracking-wider border-r border-[#E5E6EB] last:border-r-0"
@@ -75,18 +30,10 @@ export const MonthView: React.FC<MonthViewProps> = ({
         ))}
       </div>
 
-      {/* Month Days Grid */}
       <div className="grid grid-cols-7 auto-rows-fr">
         {calendarDays.map(({ date, isCurrentMonth }) => {
           const today = isToday(date);
-          const dayBlocks = blocks.filter((b) => {
-            const bd = new Date(b.start_at);
-            return (
-              bd.getDate() === date.getDate() &&
-              bd.getMonth() === date.getMonth() &&
-              bd.getFullYear() === date.getFullYear()
-            );
-          });
+          const dayBlocks = blocksByDate.get(toDateKey(date)) ?? [];
 
           return (
             <div
@@ -119,13 +66,9 @@ export const MonthView: React.FC<MonthViewProps> = ({
                 )}
               </div>
 
-              {/* Study block pills */}
               <div className="flex flex-col gap-1 mt-1.5 overflow-hidden">
                 {dayBlocks.slice(0, 2).map((b) => {
                   const color = b.course_color || "#5553B7";
-                  const code = b.course_code;
-                  const title = b.task_title || "Session";
-
                   return (
                     <button
                       key={b.id}
@@ -140,8 +83,10 @@ export const MonthView: React.FC<MonthViewProps> = ({
                       }}
                       className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-[#252735] text-left truncate hover:opacity-85 transition-opacity"
                     >
-                      {code && <span className="opacity-75 mr-1 font-bold">{code}</span>}
-                      <span>{title}</span>
+                      {b.course_code && (
+                        <span className="opacity-75 mr-1 font-bold">{b.course_code}</span>
+                      )}
+                      <span>{b.task_title || "Session"}</span>
                     </button>
                   );
                 })}

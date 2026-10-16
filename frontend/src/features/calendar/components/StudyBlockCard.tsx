@@ -1,59 +1,85 @@
 import React from "react";
-import { StudyBlock, Task, Course } from "@/types";
+import { StudyBlock } from "@/types";
 import { CourseTag } from "@/components/common/CourseTag";
+import { CheckCircle2 } from "lucide-react";
+import { formatTimeRange } from "../calendarUtils";
 
 interface StudyBlockCardProps {
   block: StudyBlock;
-  task?: Task;
-  course?: Course;
-  onClick: () => void;
+  hourHeight: number;
+  compact?: boolean;
+  onSelect: (block: StudyBlock) => void;
 }
 
 export const StudyBlockCard: React.FC<StudyBlockCardProps> = ({
   block,
-  task,
-  course,
-  onClick,
+  hourHeight,
+  compact = false,
+  onSelect,
 }) => {
-  const color = block.course_color || course?.color || "#5553B7";
-  const code = block.course_code || course?.code || "GENERAL";
-  const title = block.task_title || task?.title || "Focus Session";
+  const bStart = new Date(block.start_at);
+  const bEnd = new Date(block.end_at);
+  const startHour = bStart.getHours() + bStart.getMinutes() / 60;
+  const endHour = bEnd.getHours() + bEnd.getMinutes() / 60;
 
-  const formatTime = (iso: string) => {
-    return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  };
+  const top = Math.max(0, (startHour - 8) * hourHeight);
+  const minHeight = compact ? 28 : 34;
+  const height = Math.max(minHeight, (endHour - startHour) * hourHeight - 3);
 
-  const hours = Math.round(
-    ((new Date(block.end_at).getTime() - new Date(block.start_at).getTime()) / 3600000) * 10
-  ) / 10;
-
+  const color = block.course_color || "#5553B7";
+  const code = block.course_code || "STUDY";
+  const title = block.task_title || "Study Session";
   const isCompleted = block.status === "completed";
+  const timeRange = formatTimeRange(block.start_at, block.end_at);
 
   return (
-    <button
-      onClick={onClick}
-      className={`text-left w-full p-2.5 rounded-lg border-l-[3px] flex flex-col gap-1 transition-all hover:shadow-sm cursor-pointer ${
-        isCompleted ? "opacity-60" : ""
-      }`}
-      style={{
-        backgroundColor: `${color}18`,
-        borderLeftColor: color,
+    <div
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect(block);
       }}
+      style={{
+        top: `${top}px`,
+        height: `${height}px`,
+        backgroundColor: `${color}18`,
+        borderLeft: `${compact ? 3 : 4}px solid ${color}`,
+        borderTop: `1px solid ${color}35`,
+        borderRight: `1px solid ${color}35`,
+        borderBottom: `1px solid ${color}35`,
+      }}
+      className={`absolute ${
+        compact
+          ? "left-1 right-1 rounded-md p-1.5 flex-col justify-between overflow-hidden"
+          : "left-2 right-2 rounded-lg p-2.5 items-center justify-between"
+      } flex shadow-xs hover:shadow-md transition-all cursor-pointer z-10 ${
+        isCompleted ? "opacity-75" : ""
+      }`}
     >
-      <div className="flex items-center justify-between text-[11px] font-semibold text-[#252735]">
-        <span>
-          {formatTime(block.start_at)}–{formatTime(block.end_at)}
-        </span>
-        <span className="text-[10px] text-[#747683]">{hours} h</span>
-      </div>
-
-      <span className="text-xs font-semibold text-[#252735] line-clamp-2">
-        {title}
-      </span>
-
-      <div className="pt-0.5">
-        <CourseTag code={code} color={color} />
-      </div>
-    </button>
+      {compact ? (
+        <>
+          <div className="flex items-center justify-between gap-1 leading-none">
+            <CourseTag code={code} color={color} />
+            <span className="text-[10px] font-medium text-[#747683]">{timeRange}</span>
+          </div>
+          <div className="flex items-center justify-between gap-1 mt-0.5">
+            <span className="text-[11px] font-bold text-[#252735] truncate">{title}</span>
+            {isCompleted && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="flex items-center gap-3 min-w-0">
+            <CourseTag code={code} color={color} />
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-bold text-[#252735] truncate">{title}</span>
+              <span className="text-[11px] text-[#747683]">
+                {timeRange} &bull; {block.status}
+              </span>
+            </div>
+          </div>
+          {isCompleted && <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />}
+        </>
+      )}
+    </div>
   );
 };

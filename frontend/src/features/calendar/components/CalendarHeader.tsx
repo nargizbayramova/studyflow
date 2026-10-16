@@ -1,10 +1,24 @@
 import React from "react";
 import { Plus, ChevronLeft, ChevronRight, Calendar, LayoutList, Grid3X3 } from "lucide-react";
+import { CalendarViewMode, formatCalendarTitle } from "../calendarUtils";
 
-export type CalendarViewMode = "day" | "week" | "month";
+export type { CalendarViewMode };
+
+const VIEW_OPTIONS: { id: CalendarViewMode; label: string; Icon: React.FC<{ className?: string }> }[] = [
+  { id: "day", label: "Day", Icon: LayoutList },
+  { id: "week", label: "Week", Icon: Calendar },
+  { id: "month", label: "Month", Icon: Grid3X3 },
+];
+
+const PERIOD_LABELS: Record<CalendarViewMode, string> = {
+  day: "today",
+  week: "this week",
+  month: "this month",
+};
 
 interface CalendarHeaderProps {
   currentDate: Date;
+  weekDays: Date[];
   viewMode: CalendarViewMode;
   onViewModeChange: (mode: CalendarViewMode) => void;
   onPrev: () => void;
@@ -16,6 +30,7 @@ interface CalendarHeaderProps {
 
 export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   currentDate,
+  weekDays,
   viewMode,
   onViewModeChange,
   onPrev,
@@ -24,43 +39,6 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   onAddBlock,
   totalScheduledHours,
 }) => {
-  const formatTitle = () => {
-    if (viewMode === "day") {
-      return currentDate.toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-    }
-    if (viewMode === "month") {
-      return currentDate.toLocaleDateString("en-US", {
-        month: "long",
-        year: "numeric",
-      });
-    }
-    // Week mode
-    const d = new Date(currentDate);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    const weekStart = new Date(d.setDate(diff));
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 6);
-
-    const sMonth = weekStart.toLocaleDateString("en-US", { month: "short" });
-    const sDay = weekStart.getDate();
-    const eDay = weekEnd.getDate();
-    const year = weekEnd.getFullYear();
-    return `Week of ${sMonth} ${sDay}–${eDay}, ${year}`;
-  };
-
-  const badgeText =
-    viewMode === "day"
-      ? `${totalScheduledHours} h scheduled today`
-      : viewMode === "month"
-      ? `${totalScheduledHours} h scheduled this month`
-      : `${totalScheduledHours} h scheduled this week`;
-
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -106,46 +84,30 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             Today
           </button>
 
-          <span className="text-sm font-bold text-[#252735] ml-1">{formatTitle()}</span>
+          <span className="text-sm font-bold text-[#252735] ml-1">
+            {formatCalendarTitle(currentDate, viewMode, weekDays)}
+          </span>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* View mode toggle */}
           <div className="flex items-center p-1 bg-[#F7F7F4] border border-[#E5E6EB] rounded-lg text-xs font-semibold">
-            <button
-              onClick={() => onViewModeChange("day")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
-                viewMode === "day"
-                  ? "bg-white text-[#5553B7] shadow-sm font-bold"
-                  : "text-[#747683] hover:text-[#252735]"
-              }`}
-            >
-              <LayoutList className="w-3.5 h-3.5" /> Day
-            </button>
-            <button
-              onClick={() => onViewModeChange("week")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
-                viewMode === "week"
-                  ? "bg-white text-[#5553B7] shadow-sm font-bold"
-                  : "text-[#747683] hover:text-[#252735]"
-              }`}
-            >
-              <Calendar className="w-3.5 h-3.5" /> Week
-            </button>
-            <button
-              onClick={() => onViewModeChange("month")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
-                viewMode === "month"
-                  ? "bg-white text-[#5553B7] shadow-sm font-bold"
-                  : "text-[#747683] hover:text-[#252735]"
-              }`}
-            >
-              <Grid3X3 className="w-3.5 h-3.5" /> Month
-            </button>
+            {VIEW_OPTIONS.map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                onClick={() => onViewModeChange(id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
+                  viewMode === id
+                    ? "bg-white text-[#5553B7] shadow-sm font-bold"
+                    : "text-[#747683] hover:text-[#252735]"
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" /> {label}
+              </button>
+            ))}
           </div>
 
           <span className="text-xs font-semibold bg-[#EFEEF9] px-3 py-1.5 rounded-lg text-[#5553B7]">
-            {badgeText}
+            {totalScheduledHours} h scheduled {PERIOD_LABELS[viewMode]}
           </span>
         </div>
       </div>
