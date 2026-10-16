@@ -5,7 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core.config import settings
 
 # psycopg 3 is natively async, so the same URL works for the async engine and Alembic's sync one.
-engine = create_async_engine(settings.sqlalchemy_database_uri, pool_pre_ping=True)
+engine = create_async_engine(
+    settings.sqlalchemy_database_uri,
+    pool_pre_ping=True,
+    pool_recycle=300,
+)
 SessionLocal = async_sessionmaker(engine, autoflush=False, expire_on_commit=False)
 
 
