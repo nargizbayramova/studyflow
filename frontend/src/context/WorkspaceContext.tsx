@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useSemesters } from "@/api/courses";
+import { useAuth } from "@/context/AuthContext";
 
 interface WorkspaceContextType {
   workspace: string;
@@ -14,7 +15,8 @@ const STORAGE_KEY = "studyflow_workspace";
 const DEFAULT_WORKSPACE = "Fall 2026";
 
 export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { data: serverSemesters = [] } = useSemesters();
+  const { isAuthenticated } = useAuth();
+  const { data: serverSemesters = [] } = useSemesters({ enabled: isAuthenticated });
   const [workspace, setWorkspaceState] = useState<string>(() => {
     return localStorage.getItem(STORAGE_KEY) || DEFAULT_WORKSPACE;
   });

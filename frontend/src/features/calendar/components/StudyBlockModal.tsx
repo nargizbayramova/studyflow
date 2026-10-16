@@ -17,6 +17,16 @@ interface StudyBlockModalProps {
   onDelete: (id: number) => Promise<void>;
 }
 
+function toLocalDatetimeString(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 export const StudyBlockModal: React.FC<StudyBlockModalProps> = ({
   isOpen,
   onClose,
@@ -37,15 +47,15 @@ export const StudyBlockModal: React.FC<StudyBlockModalProps> = ({
   useEffect(() => {
     if (block) {
       setTaskId(block.task_id);
-      setStartAt(new Date(block.start_at).toISOString().slice(0, 16));
-      setEndAt(new Date(block.end_at).toISOString().slice(0, 16));
+      setStartAt(toLocalDatetimeString(new Date(block.start_at)));
+      setEndAt(toLocalDatetimeString(new Date(block.end_at)));
     } else {
       setTaskId(tasks[0]?.id || 0);
       const base = initialSlot ? new Date(initialSlot) : new Date();
       if (!initialSlot) base.setMinutes(0, 0, 0);
-      setStartAt(base.toISOString().slice(0, 16));
-      const later = new Date(base.getTime() + 1.5 * 3600000);
-      setEndAt(later.toISOString().slice(0, 16));
+      setStartAt(toLocalDatetimeString(base));
+      const later = new Date(base.getTime() + 60 * 60 * 1000);
+      setEndAt(toLocalDatetimeString(later));
     }
     setError(null);
   }, [block, initialSlot, isOpen, tasks]);

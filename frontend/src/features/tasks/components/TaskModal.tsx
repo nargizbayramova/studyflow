@@ -24,6 +24,16 @@ interface TaskModalProps {
   defaultCourseId?: number;
 }
 
+function toLocalDatetimeString(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 export const TaskModal: React.FC<TaskModalProps> = ({
   isOpen,
   onClose,
@@ -49,7 +59,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     if (initialData) {
       setTitle(initialData.title);
       setCourseId(initialData.course_id);
-      setDueDate(new Date(initialData.due_date).toISOString().slice(0, 16));
+      setDueDate(toLocalDatetimeString(new Date(initialData.due_date)));
       setEstimatedHours(initialData.estimated_hours || 1);
       setWeightPercent(initialData.weight_percent || 0);
       setType(initialData.type);
@@ -62,7 +72,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       const d = new Date();
       d.setDate(d.getDate() + 2);
       d.setHours(23, 59, 0, 0);
-      setDueDate(d.toISOString().slice(0, 16));
+      setDueDate(toLocalDatetimeString(d));
       setEstimatedHours(2);
       setWeightPercent(10);
       setType("assignment");

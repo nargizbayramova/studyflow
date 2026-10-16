@@ -33,8 +33,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             className={twMerge(
               clsx(
                 "block w-full h-[46px] rounded-lg border text-sm text-[#252735] transition-all focus:outline-none focus:ring-1 bg-white",
-                leftIcon ? "pl-10" : "px-3.5",
-                rightIcon ? "pr-10" : "px-3.5",
+                leftIcon ? "pl-10" : "pl-3.5",
+                rightIcon ? "pr-10" : "pr-3.5",
                 error
                   ? "border-rose-300 text-rose-900 focus:border-rose-500 focus:ring-rose-500/20"
                   : "border-[#E5E6EB] placeholder-[#747683]/60 focus:border-[#5553B7] focus:ring-[#5553B7]",

@@ -29,10 +29,11 @@ export function useCourse(id: number) {
   });
 }
 
-export function useSemesters() {
+export function useSemesters(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: [...courseKeys.all, "semesters"],
     queryFn: () => apiClient<string[]>("/courses/semesters"),
+    enabled: options?.enabled,
   });
 }
 
