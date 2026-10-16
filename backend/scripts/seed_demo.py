@@ -15,8 +15,17 @@ async def seed_data():
         res = await db.execute(select(User).where(User.email == TARGET_EMAIL))
         user = res.scalar_one_or_none()
         if not user:
-            print(f"Error: User {TARGET_EMAIL} not found!")
-            return
+            print(f"User {TARGET_EMAIL} does not exist in this database. Creating user...")
+            from app.core.security import hash_password
+            user = User(
+                email=TARGET_EMAIL,
+                hashed_password=hash_password("12345678"),
+                full_name="Murad Bayramov",
+                is_active=True,
+            )
+            db.add(user)
+            await db.flush()
+            print(f"Created user {user.full_name} (ID: {user.id}) with password 12345678.")
 
         user_id = user.id
         print(f"Seeding realistic data for user {user.full_name} (ID: {user_id}, {user.email})...")
