@@ -1,6 +1,8 @@
 from app.schemas.errors import ErrorResponse, FieldError
 from app.schemas.health import HealthResponse
 from app.schemas.planner import (
+    AIPrioritizedTaskItem,
+    AITaskPrioritizationResult,
     CourseCreate,
     CourseRead,
     CourseUpdate,
@@ -23,6 +25,8 @@ __all__ = [
     "ErrorResponse",
     "FieldError",
     "HealthResponse",
+    "AIPrioritizedTaskItem",
+    "AITaskPrioritizationResult",
     "UserCreate",
     "UserUpdate",
     "UserRead",

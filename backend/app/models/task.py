@@ -2,7 +2,7 @@ import enum
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, DateTime, Enum, Float, ForeignKey, String, Text
+from sqlalchemy import CheckConstraint, DateTime, Enum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -64,6 +64,9 @@ class Task(TimestampMixin, Base):
     estimated_hours: Mapped[float] = mapped_column(Float, default=1.0)
     weight_percent: Mapped[float] = mapped_column(Float, default=0.0)
     ai_priority_score: Mapped[float | None] = mapped_column(Float)
+    priority_rank: Mapped[int | None] = mapped_column(Integer, index=True)
+    urgency_level: Mapped[str | None] = mapped_column(String(20))
+    ai_recommendation: Mapped[str | None] = mapped_column(Text)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     user: Mapped["User"] = relationship(back_populates="tasks")

@@ -2,8 +2,10 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Flag } from "lucide-react";
 import { Task, Course } from "@/types";
+import { usePrioritizeTasks } from "@/api/tasks";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import { CourseTag } from "@/components/common/CourseTag";
-import { PriorityBadge } from "@/components/common/PriorityBadge";
+import { PriorityBadge, UrgencyBadge } from "@/components/common/PriorityBadge";
 
 interface ComingUpNextProps {
   tasks: Task[];
@@ -11,10 +13,20 @@ interface ComingUpNextProps {
 }
 
 export const ComingUpNext: React.FC<ComingUpNextProps> = ({ tasks, courses }) => {
+  const { workspace } = useWorkspace();
+  const { prioritizeTasks, isPrioritizing } = usePrioritizeTasks();
+
   const pendingTasks = tasks
     .filter((t) => t.status !== "completed")
-    .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
-    .slice(0, 4);
+    .sort((a, b) => {
+      if (a.priority_rank != null && b.priority_rank != null) {
+        return a.priority_rank - b.priority_rank;
+      }
+      if (a.priority_rank != null) return -1;
+      if (b.priority_rank != null) return 1;
+      return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+    })
+    .slice(0, 5);
 
   const formatDueDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -25,18 +37,28 @@ export const ComingUpNext: React.FC<ComingUpNextProps> = ({ tasks, courses }) =>
 
   return (
     <div className="flex-1 p-6 bg-white border border-[#E5E6EB] rounded-xl flex flex-col gap-5 shadow-sm">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h3 className="text-lg font-semibold text-[#252735]">Coming up next</h3>
-        <Link
-          to="/tasks"
-          className="text-xs text-[#5553B7] hover:text-[#48469F] font-medium transition-colors"
-        >
-          View all tasks →
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => void prioritizeTasks(workspace)}
+            disabled={isPrioritizing || pendingTasks.length === 0}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#EFEEF9] hover:bg-[#E3E1F4] text-[#5553B7] disabled:opacity-60 text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
+          >
+            <span>{isPrioritizing ? "Prioritizing..." : "⚡ Prioritize with AI"}</span>
+          </button>
+          <Link
+            to="/tasks"
+            className="text-xs text-[#5553B7] hover:text-[#48469F] font-medium transition-colors"
+          >
+            View all →
+          </Link>
+        </div>
       </div>
 
       <p className="text-[13px] text-[#747683] -mt-2">
-        Task deadlines, not study sessions
+        Prioritized task checklist & upcoming deadlines
       </p>
 
       <div className="flex flex-col">
@@ -51,26 +73,34 @@ export const ComingUpNext: React.FC<ComingUpNextProps> = ({ tasks, courses }) =>
 
             return (
               <React.Fragment key={task.id}>
-                <div className="py-3.5 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <Flag className="w-4 h-4 text-[#747683] flex-shrink-0" />
+                <div className="py-3.5 flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 overflow-hidden">
+                    <Flag className="w-4 h-4 text-[#747683] flex-shrink-0 mt-0.5" />
                     <div className="flex flex-col gap-1 overflow-hidden">
                       <span className="text-[13px] text-[#252735] font-medium truncate">
                         {task.title}
                       </span>
-                      <CourseTag
-                        code={course?.code || "GENERAL"}
-                        color={course?.color || "#5553B7"}
-                      />
+                      {task.ai_recommendation && (
+                        <p className="text-xs text-[#747683] leading-snug">
+                          {task.ai_recommendation}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 pt-0.5">
+                        <CourseTag
+                          code={course?.code || "GENERAL"}
+                          color={course?.color || "#5553B7"}
+                        />
+                        <UrgencyBadge urgency={task.urgency_level} rank={task.priority_rank} />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 flex-shrink-0">
+                  <div className="flex items-center gap-3 flex-shrink-0">
                     <div className="flex flex-col text-right">
                       <span className="text-xs font-semibold text-[#252735]">{monthDay}</span>
                       <span className="text-[11px] text-[#747683]">{time}</span>
                     </div>
-                    <PriorityBadge priority={task.priority} />
+                    {!task.urgency_level && <PriorityBadge priority={task.priority} />}
                   </div>
                 </div>
                 {idx < pendingTasks.length - 1 && (

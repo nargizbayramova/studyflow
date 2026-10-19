@@ -109,9 +109,23 @@ class TaskRead(ORM):
     estimated_hours: float
     weight_percent: float
     ai_priority_score: float | None
+    priority_rank: int | None = None
+    urgency_level: str | None = None
+    ai_recommendation: str | None = None
     completed_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+
+class AIPrioritizedTaskItem(BaseModel):
+    task_id: int
+    priority_rank: int
+    urgency_level: str
+    ai_recommendation: str
+
+
+class AITaskPrioritizationResult(BaseModel):
+    ranked_tasks: list[AIPrioritizedTaskItem]
 
 
 # --- Availability ---
