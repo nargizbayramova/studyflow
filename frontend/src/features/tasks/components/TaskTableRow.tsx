@@ -2,7 +2,7 @@ import React from "react";
 import { Circle, CheckCircle2, MoreHorizontal } from "lucide-react";
 import { Task, Course } from "@/types";
 import { CourseTag } from "@/components/common/CourseTag";
-import { PriorityBadge } from "@/components/common/PriorityBadge";
+import { PriorityBadge, UrgencyBadge } from "@/components/common/PriorityBadge";
 
 interface TaskTableRowProps {
   task: Task;
@@ -88,6 +88,9 @@ export const TaskTableRow: React.FC<TaskTableRowProps> = ({
         >
           {task.title}
         </span>
+        {task.ai_recommendation && !isCompleted && (
+          <p className="text-xs text-[#747683] leading-snug">{task.ai_recommendation}</p>
+        )}
         <div className="flex items-center gap-2">
           <CourseTag code={course?.code || "GENERAL"} color={course?.color || "#5553B7"} />
           <span className="text-[11px] text-[#747683]">· {formatType(task.type)}</span>
@@ -105,7 +108,11 @@ export const TaskTableRow: React.FC<TaskTableRowProps> = ({
 
       {/* Priority */}
       <div className="w-[80px] flex-shrink-0">
-        <PriorityBadge priority={task.priority} />
+        {task.urgency_level && !isCompleted ? (
+          <UrgencyBadge urgency={task.urgency_level} rank={task.priority_rank} />
+        ) : (
+          <PriorityBadge priority={task.priority} />
+        )}
       </div>
 
       {/* Effort */}

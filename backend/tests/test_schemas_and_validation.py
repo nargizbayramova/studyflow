@@ -386,3 +386,89 @@ def test_structured_error_responses():
     assert len(body_422["field_errors"]) > 0
     assert any(f["field"] == "username" for f in body_422["field_errors"])
 
+
+@pytest.mark.anyio
+async def test_prioritize_tasks_endpoint(monkeypatch):
+    from unittest.mock import AsyncMock, MagicMock
+    from app.api.v1 import tasks as tasks_api
+    from app.schemas.planner import AIPrioritizedTaskItem, AITaskPrioritizationResult
+
+    paths = app.openapi()["paths"]
+    assert "/api/v1/tasks/prioritize" in paths
+
+    class FakeScalarResult:
+        def __init__(self, items):
+            self._items = items
+
+        def unique(self):
+            return self._items
+
+    mock_user = MagicMock(id=5)
+
+    # Case 1: 0 incomplete tasks -> returns [] without calling AI
+    ai_mock = AsyncMock()
+    monkeypatch.setattr(tasks_api, "generate_structured", ai_mock)
+    empty_db = MagicMock()
+    empty_db.scalars = AsyncMock(return_value=FakeScalarResult([]))
+    empty_res = await tasks_api.prioritize_tasks(user=mock_user, db=empty_db)
+    assert empty_res == []
+    ai_mock.assert_not_called()
+
+    # Case 2: Ranks pending tasks, runs 1 bulk update, returns sorted by priority_rank ASC
+    course = MagicMock(code="CS301")
+    t1 = MagicMock(
+        id=101,
+        title="Minor Quiz",
+        due_date=datetime.now(UTC) + timedelta(days=5),
+        estimated_hours=1.0,
+        weight_percent=5.0,
+        course=course,
+        priority_rank=None,
+        urgency_level=None,
+        ai_recommendation=None,
+    )
+    t2 = MagicMock(
+        id=102,
+        title="Final Capstone",
+        due_date=datetime.now(UTC) + timedelta(days=2),
+        estimated_hours=8.0,
+        weight_percent=40.0,
+        course=course,
+        priority_rank=None,
+        urgency_level=None,
+        ai_recommendation=None,
+    )
+
+    fake_ai = AITaskPrioritizationResult(
+        ranked_tasks=[
+            AIPrioritizedTaskItem(
+                task_id=102,
+                priority_rank=1,
+                urgency_level="CRITICAL",
+                ai_recommendation="Due in 2 days and worth 40% of your grade; start immediately.",
+            ),
+            AIPrioritizedTaskItem(
+                task_id=101,
+                priority_rank=2,
+                urgency_level="LOW",
+                ai_recommendation="Low weight quiz due later this week; review after capstone.",
+            ),
+        ]
+    )
+    monkeypatch.setattr(tasks_api, "generate_structured", AsyncMock(return_value=fake_ai))
+
+    mock_db = MagicMock()
+    mock_db.scalars = AsyncMock(return_value=FakeScalarResult([t1, t2]))
+    mock_db.execute = AsyncMock()
+    mock_db.commit = AsyncMock()
+
+    ranked = await tasks_api.prioritize_tasks(user=mock_user, db=mock_db, semester="Fall 2026")
+    assert [t.id for t in ranked] == [102, 101]
+    assert ranked[0].priority_rank == 1
+    assert ranked[0].urgency_level == "CRITICAL"
+    assert "40%" in ranked[0].ai_recommendation
+    assert ranked[1].priority_rank == 2
+    assert ranked[1].urgency_level == "LOW"
+    mock_db.execute.assert_awaited_once()
+    mock_db.commit.assert_awaited_once()
+

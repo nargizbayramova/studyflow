@@ -70,3 +70,23 @@ export function useDeleteTask() {
     },
   });
 }
+
+export function usePrioritizeTasks() {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: (semester?: string) =>
+      apiClient<Task[]>("/tasks/prioritize", {
+        method: "POST",
+        params: semester ? { semester } : undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+    },
+  });
+
+  return {
+    ...mutation,
+    prioritizeTasks: mutation.mutateAsync,
+    isPrioritizing: mutation.isPending,
+  };
+}

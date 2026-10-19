@@ -1,6 +1,12 @@
 import React, { useState, useMemo } from "react";
 import { Plus } from "lucide-react";
-import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from "@/api/tasks";
+import {
+  useTasks,
+  useCreateTask,
+  useUpdateTask,
+  useDeleteTask,
+  usePrioritizeTasks,
+} from "@/api/tasks";
 import { useCourses } from "@/api/courses";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { Task, TaskPriority, TaskStatus, TaskType } from "@/types";
@@ -18,6 +24,7 @@ export const TasksPage: React.FC = () => {
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
+  const { prioritizeTasks, isPrioritizing } = usePrioritizeTasks();
 
   const [search, setSearch] = useState("");
   const [selectedCourseId, setSelectedCourseId] = useState<number | undefined>();
@@ -51,6 +58,13 @@ export const TasksPage: React.FC = () => {
       .sort((a, b) => {
         if (a.status === "completed" && b.status !== "completed") return 1;
         if (a.status !== "completed" && b.status === "completed") return -1;
+        if (a.status !== "completed" && b.status !== "completed") {
+          if (a.priority_rank != null && b.priority_rank != null) {
+            return a.priority_rank - b.priority_rank;
+          }
+          if (a.priority_rank != null) return -1;
+          if (b.priority_rank != null) return 1;
+        }
         const diff = new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
         return sortByEarliest ? diff : -diff;
       });
@@ -67,16 +81,26 @@ export const TasksPage: React.FC = () => {
         title="All tasks & assignments"
         subtitle="Manage upcoming deadlines, readings, and assignment milestones"
         actions={
-          <Button
-            size="sm"
-            onClick={() => {
-              setEditingTask(null);
-              setIsModalOpen(true);
-            }}
-            className="bg-[#5553B7] hover:bg-[#48469F] text-white"
-          >
-            <Plus className="w-4 h-4" /> Add task
-          </Button>
+          <div className="flex items-center gap-2.5">
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={isPrioritizing || openCount === 0}
+              onClick={() => void prioritizeTasks(workspace)}
+            >
+              {isPrioritizing ? "Prioritizing..." : "⚡ Prioritize with AI"}
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditingTask(null);
+                setIsModalOpen(true);
+              }}
+              className="bg-[#5553B7] hover:bg-[#48469F] text-white"
+            >
+              <Plus className="w-4 h-4" /> Add task
+            </Button>
+          </div>
         }
       />
 
