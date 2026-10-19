@@ -29,7 +29,10 @@ export function useSchedule() {
     mutationFn: () =>
       apiClient<ScheduleResponse>("/schedule/generate", {
         method: "POST",
-        params: workspace ? { semester: workspace } : undefined,
+        params: {
+          tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          ...(workspace ? { semester: workspace } : {}),
+        },
       }),
     onMutate: () => setActionError(null),
     onSuccess: (data) => {
