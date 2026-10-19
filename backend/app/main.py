@@ -52,6 +52,60 @@ app = FastAPI(
 )
 
 
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from app.schemas.errors import ErrorResponse, FieldError
+
+def _status_to_code(status_code: int) -> str:
+    codes = {
+        400: "BAD_REQUEST",
+        401: "UNAUTHORIZED",
+        403: "FORBIDDEN",
+        404: "NOT_FOUND",
+        405: "METHOD_NOT_ALLOWED",
+        409: "CONFLICT",
+        422: "VALIDATION_ERROR",
+        500: "INTERNAL_SERVER_ERROR",
+        502: "BAD_GATEWAY",
+        503: "SERVICE_UNAVAILABLE",
+    }
+    return codes.get(status_code, f"HTTP_{status_code}")
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    field_errors: list[FieldError] = []
+    messages: list[str] = []
+    for err in exc.errors():
+        loc = err.get("loc", ())
+        field_parts = [str(p) for p in loc if p != "body"]
+        field_name = ".".join(field_parts) if field_parts else "request"
+        msg = err.get("msg", "Invalid value")
+        field_errors.append(FieldError(field=field_name, message=msg))
+        messages.append(f"{field_name}: {msg}")
+
+    summary = "; ".join(messages) if messages else "Request validation failed"
+    error_data = ErrorResponse(
+        detail=summary,
+        error_code="VALIDATION_ERROR",
+        status_code=422,
+        field_errors=field_errors or None,
+    )
+    return JSONResponse(status_code=422, content=error_data.model_dump(exclude_none=True))
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    detail_str = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+    error_data = ErrorResponse(
+        detail=detail_str,
+        error_code=_status_to_code(exc.status_code),
+        status_code=exc.status_code,
+    )
+    headers = getattr(exc, "headers", None)
+    return JSONResponse(status_code=exc.status_code, content=error_data.model_dump(exclude_none=True), headers=headers)
+
+
 @app.middleware("http")
 async def monitor_requests(request: Request, call_next) -> Response:
     """Feeds latency / unhandled-error / DB-error alert rules."""
@@ -61,7 +115,12 @@ async def monitor_requests(request: Request, call_next) -> Response:
     except Exception as e:
         logger.exception("Unhandled error on %s %s", request.method, request.url.path)
         monitoring.record_exception(e)
-        response = JSONResponse({"detail": "Internal Server Error"}, status_code=500)
+        error_data = ErrorResponse(
+            detail="Internal Server Error",
+            error_code="INTERNAL_SERVER_ERROR",
+            status_code=500,
+        )
+        response = JSONResponse(error_data.model_dump(exclude_none=True), status_code=500)
     monitoring.record_latency(time.perf_counter() - start)
     return response
 

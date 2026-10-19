@@ -362,3 +362,27 @@ def test_parse_block_datetimes_uses_user_timezone():
     start, end = _parse_block_datetimes("2026-10-19", "09:00", "11:00", ZoneInfo("Asia/Baku"))
     assert start.astimezone(UTC).hour == 5
     assert end.astimezone(UTC).hour == 7
+
+
+def test_structured_error_responses():
+    from starlette.testclient import TestClient
+
+    client = TestClient(app)
+    # 1. 404 Not Found returns structured error
+    res_404 = client.get("/api/v1/nonexistent-endpoint")
+    assert res_404.status_code == 404
+    body_404 = res_404.json()
+    assert body_404["error_code"] == "NOT_FOUND"
+    assert body_404["status_code"] == 404
+    assert "detail" in body_404
+
+    # 2. 422 Validation Error returns field_errors and structured error
+    res_422 = client.post("/api/v1/auth/login", json={})
+    assert res_422.status_code == 422
+    body_422 = res_422.json()
+    assert body_422["error_code"] == "VALIDATION_ERROR"
+    assert body_422["status_code"] == 422
+    assert "field_errors" in body_422
+    assert len(body_422["field_errors"]) > 0
+    assert any(f["field"] == "username" for f in body_422["field_errors"])
+

@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ToastProvider } from "@/context/ToastContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { WorkspaceProvider } from "@/context/WorkspaceContext";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
@@ -30,31 +31,33 @@ export const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AuthProvider>
-          <WorkspaceProvider>
-            <Routes>
-            {/* Public Auth Routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+        <ToastProvider>
+          <AuthProvider>
+            <WorkspaceProvider>
+              <Routes>
+                {/* Public Auth Routes */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
 
-            {/* Protected App Routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<AppLayout />}>
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/courses" element={<CoursesPage />} />
-                <Route path="/courses/:id" element={<CourseDetailPage />} />
-                <Route path="/tasks" element={<TasksPage />} />
-                <Route path="/calendar" element={<CalendarPage />} />
-                <Route path="/availability" element={<AvailabilityPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-              </Route>
-            </Route>
+                {/* Protected App Routes */}
+                <Route element={<ProtectedRoute />}>
+                  <Route element={<AppLayout />}>
+                    <Route path="/" element={<DashboardPage />} />
+                    <Route path="/courses" element={<CoursesPage />} />
+                    <Route path="/courses/:id" element={<CourseDetailPage />} />
+                    <Route path="/tasks" element={<TasksPage />} />
+                    <Route path="/calendar" element={<CalendarPage />} />
+                    <Route path="/availability" element={<AvailabilityPage />} />
+                    <Route path="/profile" element={<ProfilePage />} />
+                  </Route>
+                </Route>
 
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-          </WorkspaceProvider>
-        </AuthProvider>
+                {/* Fallback */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </WorkspaceProvider>
+          </AuthProvider>
+        </ToastProvider>
       </BrowserRouter>
     </QueryClientProvider>
   );

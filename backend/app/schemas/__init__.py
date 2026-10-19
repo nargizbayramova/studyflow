@@ -1,3 +1,4 @@
+from app.schemas.errors import ErrorResponse, FieldError
 from app.schemas.health import HealthResponse
 from app.schemas.planner import (
     CourseCreate,
@@ -19,6 +20,8 @@ from app.schemas.planner import (
 )
 
 __all__ = [
+    "ErrorResponse",
+    "FieldError",
     "HealthResponse",
     "UserCreate",
     "UserUpdate",

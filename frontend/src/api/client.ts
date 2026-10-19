@@ -13,6 +13,13 @@ export class ApiError extends Error {
   }
 }
 
+export function formatErrorCode(code: string): string {
+  return code
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
 export function extractErrorMessage(data: unknown, fallback: string = "Request failed"): string {
   if (!data) return fallback;
   if (typeof data === "string") return data;
@@ -20,7 +27,30 @@ export function extractErrorMessage(data: unknown, fallback: string = "Request f
   if (typeof data === "object") {
     const record = data as Record<string, unknown>;
 
-    // FastAPI 422: detail is an array of error objects: [{ loc: ["body", "field"], msg: "..." }]
+    // Structured field errors from backend: [{ field: "title", message: "..." }]
+    if (Array.isArray(record.field_errors)) {
+      const msgs = record.field_errors
+        .map((item) => {
+          if (item && typeof item === "object") {
+            const err = item as { field?: string; message?: string };
+            const rawField = err.field || "";
+            if (rawField && rawField !== "request" && rawField !== "body") {
+              const fieldName = rawField.replace(/_/g, " ");
+              const capitalized = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+              return `${capitalized}: ${err.message || "Invalid value"}`;
+            }
+            return err.message || "Invalid value";
+          }
+          return String(item);
+        })
+        .filter(Boolean);
+
+      if (msgs.length > 0) {
+        return msgs.join("; ");
+      }
+    }
+
+    // FastAPI 422 default: detail is an array of error objects: [{ loc: ["body", "field"], msg: "..." }]
     if (Array.isArray(record.detail)) {
       const messages = record.detail
         .map((item) => {
@@ -73,10 +103,11 @@ export function removeAuthToken(): void {
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined | null>;
+  silent?: boolean;
 }
 
 export async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-  const { params, headers: customHeaders, ...rest } = options;
+  const { params, silent, headers: customHeaders, ...rest } = options;
 
   let url = `${API_PREFIX}${endpoint}`;
   if (params) {
@@ -112,6 +143,13 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
       err instanceof Error
         ? `Cannot connect to server at ${API_BASE}. Is the backend running?`
         : "Network connection error";
+    if (!silent && typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("app:alert", {
+          detail: { type: "error", title: "Connection Error", message: msg },
+        })
+      );
+    }
     throw new ApiError(0, msg);
   }
 
@@ -130,6 +168,33 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
 
   if (!response.ok) {
     const message = extractErrorMessage(data, response.statusText || "Request failed");
+    let title: string | undefined;
+    if (data && typeof data === "object") {
+      const rec = data as Record<string, unknown>;
+      if (typeof rec.error_code === "string" && rec.error_code) {
+        title = formatErrorCode(rec.error_code);
+      }
+    }
+    if (!title) {
+      if (response.status === 400) title = "Bad Request";
+      else if (response.status === 401) title = "Authentication Failed";
+      else if (response.status === 403) title = "Access Denied";
+      else if (response.status === 404) title = "Not Found";
+      else if (response.status === 422) title = "Validation Error";
+      else if (response.status >= 500) title = "Server Error";
+      else title = "Action Failed";
+    }
+
+    const isLoginEndpoint = endpoint.includes("/auth/login");
+    const shouldAlert = !silent && (response.status !== 401 || isLoginEndpoint);
+    if (shouldAlert && typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("app:alert", {
+          detail: { type: "error", title, message },
+        })
+      );
+    }
+
     throw new ApiError(response.status, message, data);
   }
 
