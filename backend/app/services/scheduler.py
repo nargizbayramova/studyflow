@@ -13,6 +13,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from app.models import AvailabilitySlot, BlockStatus, Course, SlotKind, StudyBlock, Task, TaskStatus
 from app.schemas.schedule import AIGeneratedSchedule, ScheduleResponse, StudyBlockOut
+from app.services import monitoring
 from app.services.ai_client import generate_structured
 
 SYSTEM_PROMPT = (
@@ -319,6 +320,7 @@ async def _request_ai_schedule(
     try:
         return await generate_fn(SYSTEM_PROMPT, payload, AIGeneratedSchedule)
     except AI_PROVIDER_EXCEPTIONS as exc:
+        monitoring.record_ai_failure(exc)
         label = "AI rebalancer" if rebalance else "AI scheduler"
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"{label} unavailable: {exc}") from exc
 

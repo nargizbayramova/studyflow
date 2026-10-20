@@ -9,6 +9,7 @@ from sqlalchemy.orm import joinedload
 from app.api.deps import CurrentUser, DbSession, Paging, apply_update, delete_owned, get_owned
 from app.models import Course, Task, TaskPriority, TaskStatus, TaskType
 from app.schemas.planner import AITaskPrioritizationResult, TaskCreate, TaskRead, TaskUpdate
+from app.services import monitoring
 from app.services.ai_client import generate_structured
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
@@ -162,6 +163,12 @@ async def prioritize_tasks(
         t.urgency_level = urgency
         t.ai_recommendation = rec
         t.updated_at = now
+
+    monitoring.record_ai_success(
+        action="Task Prioritization",
+        user_id=user.id,
+        details=f"Ranked and prioritized {len(tasks)} tasks",
+    )
 
     return sorted(tasks, key=lambda t: (t.priority_rank is None, t.priority_rank or 0, t.due_date))
 

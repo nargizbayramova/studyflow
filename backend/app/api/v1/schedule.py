@@ -7,6 +7,7 @@ from sqlalchemy.orm import joinedload
 from app.api.deps import CurrentUser, DbSession, Paging
 from app.models import BlockStatus, Course, StudyBlock, Task
 from app.schemas.schedule import BlockStatusUpdate, ScheduleResponse, StudyBlockOut
+from app.services import monitoring
 from app.services.ai_client import generate_structured
 from app.services.scheduler import (
     _parse_block_datetimes,
@@ -79,9 +80,15 @@ async def generate_schedule(
     semester: str | None = None,
     tz: Annotated[str, Query(max_length=64, description="IANA timezone, e.g. Asia/Baku")] = "UTC",
 ) -> ScheduleResponse:
-    return await run_ai_schedule(
+    res = await run_ai_schedule(
         db, user.id, semester, tz, rebalance=False, generate_fn=generate_structured
     )
+    monitoring.record_ai_success(
+        action="Schedule Generation",
+        user_id=user.id,
+        details=f"Generated {len(res.study_blocks)} study blocks",
+    )
+    return res
 
 
 @router.post(
@@ -95,6 +102,12 @@ async def rebalance_schedule(
     semester: str | None = None,
     tz: Annotated[str, Query(max_length=64, description="IANA timezone, e.g. Asia/Baku")] = "UTC",
 ) -> ScheduleResponse:
-    return await run_ai_schedule(
+    res = await run_ai_schedule(
         db, user.id, semester, tz, rebalance=True, generate_fn=generate_structured
     )
+    monitoring.record_ai_success(
+        action="Schedule Rebalance",
+        user_id=user.id,
+        details=f"Rebalanced {len(res.study_blocks)} study blocks",
+    )
+    return res
