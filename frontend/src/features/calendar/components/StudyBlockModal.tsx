@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { StudyBlock } from "@/types";
 import { useCreateStudyBlock, useDeleteStudyBlock, useUpdateStudyBlock } from "@/api/studyBlocks";
+import { useSchedule } from "@/hooks/useSchedule";
 import { useTasks } from "@/api/tasks";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { Modal } from "@/components/common/Modal";
@@ -29,6 +30,7 @@ const StudyBlockModalContent: React.FC<StudyBlockModalProps> = ({
   initialSlot,
 }) => {
   const { workspace } = useWorkspace();
+  const { updateBlockStatus } = useSchedule();
   const { data: tasks = [] } = useTasks({ semester: workspace }, { enabled: !block });
   const createBlock = useCreateStudyBlock();
   const updateBlock = useUpdateStudyBlock();
@@ -105,18 +107,38 @@ const StudyBlockModalContent: React.FC<StudyBlockModalProps> = ({
 
         {block && (
           <div className="flex items-center gap-2 pt-1">
-            {block.status !== "completed" && (
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={async () => {
-                  await updateBlock.mutateAsync({ id: block.id, data: { status: "completed" } });
+                  await updateBlockStatus(block, "completed");
                   onClose();
                 }}
-                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors cursor-pointer"
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  block.status === "completed"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200"
+                }`}
+                title={block.status === "completed" ? "Undo Done" : "Mark Done"}
               >
-                Mark as completed
+                ✓ Done
               </button>
-            )}
+              <button
+                type="button"
+                onClick={async () => {
+                  await updateBlockStatus(block, "missed");
+                  onClose();
+                }}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  block.status === "missed"
+                    ? "bg-rose-600 text-white"
+                    : "bg-white hover:bg-rose-50 text-rose-700 border border-rose-200"
+                }`}
+                title={block.status === "missed" ? "Undo Missed" : "Mark Missed"}
+              >
+                ✕ Missed
+              </button>
+            </div>
             <button
               type="button"
               onClick={async () => {

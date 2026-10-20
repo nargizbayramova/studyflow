@@ -113,7 +113,8 @@ export function useSchedule() {
   });
 
   const updateBlockStatus = async (block: StudyBlock, status: BlockStatus | "pending") => {
-    await statusMutation.mutateAsync({ id: block.id, status });
+    const nextStatus = block.status === status ? "planned" : status;
+    await statusMutation.mutateAsync({ id: block.id, status: nextStatus });
   };
 
   const toggleBlockStatus = async (block: StudyBlock) => {
