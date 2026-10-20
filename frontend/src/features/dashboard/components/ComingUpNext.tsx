@@ -36,21 +36,21 @@ export const ComingUpNext: React.FC<ComingUpNextProps> = ({ tasks, courses }) =>
   };
 
   return (
-    <div className="flex-1 p-6 bg-white border border-[#E5E6EB] rounded-xl flex flex-col gap-5 shadow-sm">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-lg font-semibold text-[#252735]">Coming up next</h3>
-        <div className="flex items-center gap-3">
+    <div className="flex-1 min-w-0 p-4 sm:p-6 bg-white border border-[#E5E6EB] rounded-xl flex flex-col gap-4 sm:gap-5 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-base sm:text-lg font-semibold text-[#252735]">Coming up next</h3>
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <button
             type="button"
             onClick={() => void prioritizeTasks(workspace)}
             disabled={isPrioritizing || pendingTasks.length === 0}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#EFEEF9] hover:bg-[#E3E1F4] text-[#5553B7] disabled:opacity-60 text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[#EFEEF9] hover:bg-[#E3E1F4] text-[#5553B7] disabled:opacity-60 text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
           >
             <span>{isPrioritizing ? "Prioritizing..." : "⚡ Prioritize with AI"}</span>
           </button>
           <Link
             to="/tasks"
-            className="text-xs text-[#5553B7] hover:text-[#48469F] font-medium transition-colors"
+            className="text-xs text-[#5553B7] hover:text-[#48469F] font-medium transition-colors whitespace-nowrap"
           >
             View all →
           </Link>

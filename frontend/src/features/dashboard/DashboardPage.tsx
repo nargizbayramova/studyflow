@@ -33,21 +33,21 @@ export const DashboardPage: React.FC = () => {
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   return (
-    <div className="flex flex-col gap-7 max-w-7xl mx-auto font-sans">
+    <div className="flex flex-col gap-5 sm:gap-7 max-w-7xl mx-auto font-sans">
       {/* Top greeting row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-[30px] font-normal text-[#252735] tracking-tight">
+          <h1 className="text-2xl sm:text-[30px] font-normal text-[#252735] tracking-tight">
             {greeting}, {firstName}
           </h1>
-          <p className="text-sm text-[#747683]">
+          <p className="text-xs sm:text-sm text-[#747683]">
             A little focus today goes a long way. Here’s your week at a glance.
           </p>
         </div>
 
         <Link
           to="/tasks"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#5553B7] hover:bg-[#48469F] text-white text-sm font-semibold transition-colors shadow-sm self-start sm:self-auto cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#5553B7] hover:bg-[#48469F] text-white text-sm font-semibold transition-colors shadow-sm self-start sm:self-auto cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Add task</span>

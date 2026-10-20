@@ -45,10 +45,10 @@ export const TodayStudyPlan: React.FC<TodayStudyPlanProps> = ({
   }).format(new Date());
 
   return (
-    <div className="w-full lg:w-[420px] p-6 bg-white border border-[#E5E6EB] rounded-xl flex flex-col gap-4 flex-shrink-0 shadow-sm">
+    <div className="w-full lg:w-[420px] p-4 sm:p-6 bg-white border border-[#E5E6EB] rounded-xl flex flex-col gap-4 flex-shrink-0 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-lg font-semibold text-[#252735]">Today’s study plan</h3>
-        <div className="flex items-center gap-1.5">
+        <h3 className="text-base sm:text-lg font-semibold text-[#252735]">Today’s study plan</h3>
+        <div className="flex flex-wrap items-center gap-1.5">
           <button
             onClick={() => void generateSchedule()}
             disabled={busy}
@@ -67,8 +67,8 @@ export const TodayStudyPlan: React.FC<TodayStudyPlanProps> = ({
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-[13px]">
-        <span className="text-[#747683]">{todayStr}</span>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-[13px]">
+        <span className="text-[#747683] text-xs sm:text-[13px]">{todayStr}</span>
         <span className="px-2.5 py-1 bg-[#EFEEF9] text-[#5553B7] rounded-md text-xs font-medium">
           {totalTodayHours} h scheduled
         </span>

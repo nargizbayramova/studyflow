@@ -23,9 +23,10 @@ export const MonthView: React.FC<MonthViewProps> = ({
         {WEEKDAY_LABELS.map((day) => (
           <div
             key={day}
-            className="p-3 text-center text-xs font-semibold text-[#747683] uppercase tracking-wider border-r border-[#E5E6EB] last:border-r-0"
+            className="p-2 sm:p-3 text-center text-[10px] sm:text-xs font-semibold text-[#747683] uppercase tracking-wider border-r border-[#E5E6EB] last:border-r-0"
           >
-            {day}
+            <span className="sm:hidden">{day.charAt(0)}</span>
+            <span className="hidden sm:inline">{day}</span>
           </div>
         ))}
       </div>
@@ -43,13 +44,13 @@ export const MonthView: React.FC<MonthViewProps> = ({
                 slot.setHours(10, 0, 0, 0);
                 onSelectSlot(slot);
               }}
-              className={`min-h-[110px] p-2 border-b border-r border-[#F0F1F5] flex flex-col justify-between transition-colors hover:bg-slate-50/70 cursor-pointer ${
+              className={`min-h-[78px] sm:min-h-[110px] p-1 sm:p-2 border-b border-r border-[#F0F1F5] flex flex-col justify-between transition-colors hover:bg-slate-50/70 cursor-pointer ${
                 !isCurrentMonth ? "bg-[#FAFAF8]/50 text-slate-300" : ""
               }`}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-0.5">
                 <span
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${
+                  className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[11px] sm:text-xs font-semibold ${
                     today
                       ? "bg-[#5553B7] text-white"
                       : isCurrentMonth
@@ -60,7 +61,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                   {date.getDate()}
                 </span>
                 {dayBlocks.length > 0 && (
-                  <span className="text-[10px] font-bold text-[#5553B7]">
+                  <span className="hidden sm:inline text-[10px] font-bold text-[#5553B7]">
                     {dayBlocks.length} session{dayBlocks.length === 1 ? "" : "s"}
                   </span>
                 )}

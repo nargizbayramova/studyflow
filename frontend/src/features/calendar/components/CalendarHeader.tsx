@@ -49,45 +49,47 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
 }) => {
   const busy = isGenerating || isRebalancing;
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4 sm:gap-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-[30px] font-normal text-[#252735] tracking-tight">Study calendar</h1>
-          <p className="text-sm text-[#747683]">
+          <h1 className="text-2xl sm:text-[30px] font-normal text-[#252735] tracking-tight">
+            Study calendar
+          </h1>
+          <p className="text-xs sm:text-sm text-[#747683]">
             Dedicated time for deep work. Build a routine that respects your energy.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 self-start sm:self-auto w-full sm:w-auto">
           <button
             onClick={onGenerateSchedule}
             disabled={busy}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#5553B7] bg-[#EFEEF9] hover:bg-[#E2E0F5] disabled:opacity-60 text-[#5553B7] text-sm font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border border-[#5553B7] bg-[#EFEEF9] hover:bg-[#E2E0F5] disabled:opacity-60 text-[#5553B7] text-xs sm:text-sm font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed flex-1 sm:flex-initial"
           >
-            <Sparkles className="w-4 h-4" />
+            <Sparkles className="w-4 h-4 flex-shrink-0" />
             <span>{isGenerating ? "Generating..." : "Generate AI Schedule"}</span>
           </button>
 
           <button
             onClick={onRebalanceSchedule}
             disabled={busy}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#E5E6EB] bg-white hover:bg-slate-50 disabled:opacity-60 text-[#252735] text-sm font-semibold transition-colors shadow-2xs cursor-pointer disabled:cursor-not-allowed"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border border-[#E5E6EB] bg-white hover:bg-slate-50 disabled:opacity-60 text-[#252735] text-xs sm:text-sm font-semibold transition-colors shadow-2xs cursor-pointer disabled:cursor-not-allowed flex-1 sm:flex-initial"
           >
             <span>{isRebalancing ? "Rebalancing..." : "🔄 Rebalance Schedule"}</span>
           </button>
 
           <button
             onClick={onAddBlock}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#5553B7] hover:bg-[#48469F] text-white text-sm font-semibold transition-colors shadow-sm cursor-pointer"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg bg-[#5553B7] hover:bg-[#48469F] text-white text-xs sm:text-sm font-semibold transition-colors shadow-sm cursor-pointer w-full sm:w-auto"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 flex-shrink-0" />
             <span>Schedule session</span>
           </button>
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-3.5 px-5 border border-[#E5E6EB] rounded-xl shadow-sm">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-3 sm:p-3.5 sm:px-5 border border-[#E5E6EB] rounded-xl shadow-sm">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-1 border border-[#E5E6EB] rounded-lg p-0.5">
             <button
               onClick={onPrev}
@@ -112,18 +114,18 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             Today
           </button>
 
-          <span className="text-sm font-bold text-[#252735] ml-1">
+          <span className="text-xs sm:text-sm font-bold text-[#252735] ml-0.5 truncate">
             {formatCalendarTitle(currentDate, viewMode, weekDays)}
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2.5 sm:gap-3">
           <div className="flex items-center p-1 bg-[#F7F7F4] border border-[#E5E6EB] rounded-lg text-xs font-semibold">
             {VIEW_OPTIONS.map(({ id, label, Icon }) => (
               <button
                 key={id}
                 onClick={() => onViewModeChange(id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-md transition-colors cursor-pointer ${
                   viewMode === id
                     ? "bg-white text-[#5553B7] shadow-sm font-bold"
                     : "text-[#747683] hover:text-[#252735]"
@@ -134,7 +136,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             ))}
           </div>
 
-          <span className="text-xs font-semibold bg-[#EFEEF9] px-3 py-1.5 rounded-lg text-[#5553B7]">
+          <span className="text-[11px] sm:text-xs font-semibold bg-[#EFEEF9] px-2.5 sm:px-3 py-1.5 rounded-lg text-[#5553B7] whitespace-nowrap">
             {totalScheduledHours} h scheduled {PERIOD_LABELS[viewMode]}
           </span>
         </div>

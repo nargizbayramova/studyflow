@@ -35,7 +35,7 @@ export const DayView: React.FC<DayViewProps> = ({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
       <div className="lg:col-span-8 bg-white border border-[#E5E6EB] rounded-xl shadow-sm overflow-hidden flex flex-col">
-        <div className="p-4 border-b border-[#E5E6EB] bg-[#F7F7F4]/60 flex items-center justify-between">
+        <div className="p-3.5 sm:p-4 border-b border-[#E5E6EB] bg-[#F7F7F4]/60 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-[#5553B7]" />
             <span className="text-sm font-bold text-[#252735]">Hourly Schedule</span>
@@ -43,13 +43,13 @@ export const DayView: React.FC<DayViewProps> = ({
           <span className="text-xs text-[#747683]">Click any open slot to schedule a session</span>
         </div>
 
-        <div className="grid grid-cols-[68px_1fr] relative overflow-y-auto max-h-[720px]">
+        <div className="grid grid-cols-[56px_1fr] sm:grid-cols-[68px_1fr] relative overflow-y-auto max-h-[640px] sm:max-h-[720px]">
           <div className="border-r border-[#E5E6EB] bg-[#FAFAF8] select-none">
             {CALENDAR_HOURS.map((h) => (
               <div
                 key={h}
                 style={{ height: `${HOUR_HEIGHT}px` }}
-                className="border-b border-[#F0F1F5] text-[11px] font-medium text-[#747683] pr-2 pt-1 text-right"
+                className="border-b border-[#F0F1F5] text-[10px] sm:text-[11px] font-medium text-[#747683] pr-1.5 sm:pr-2 pt-1 text-right"
               >
                 {formatHourLabel(h)}
               </div>

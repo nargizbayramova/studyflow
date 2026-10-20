@@ -17,9 +17,9 @@ export const CourseGlancePanel: React.FC<CourseGlancePanelProps> = ({ course, ta
   const color = course.color || "#5553B7";
 
   return (
-    <div className="p-6 bg-white border border-[#E5E6EB] rounded-xl flex flex-col gap-5 shadow-sm">
+    <div className="p-4 sm:p-6 bg-white border border-[#E5E6EB] rounded-xl flex flex-col gap-4 sm:gap-5 shadow-sm">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-[#252735]">Course at a glance</h3>
+        <h3 className="text-base sm:text-lg font-semibold text-[#252735]">Course at a glance</h3>
         <span
           className="px-2.5 py-1 rounded-md text-xs font-medium"
           style={{
@@ -31,24 +31,24 @@ export const CourseGlancePanel: React.FC<CourseGlancePanelProps> = ({ course, ta
         </span>
       </div>
 
-      <div className="flex items-center gap-6 sm:gap-10">
+      <div className="grid grid-cols-3 sm:flex items-center gap-4 sm:gap-10">
         <div className="flex flex-col gap-1">
-          <span className="text-[26px] font-semibold text-[#252735] leading-none">
+          <span className="text-xl sm:text-[26px] font-semibold text-[#252735] leading-none">
             {totalTasks}
           </span>
-          <span className="text-xs text-[#747683]">Total tasks</span>
+          <span className="text-[11px] sm:text-xs text-[#747683]">Total tasks</span>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-[26px] font-semibold text-[#252735] leading-none">
+          <span className="text-xl sm:text-[26px] font-semibold text-[#252735] leading-none">
             {completedTasks} / {totalTasks}
           </span>
-          <span className="text-xs text-[#747683]">Completed</span>
+          <span className="text-[11px] sm:text-xs text-[#747683]">Completed</span>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-[26px] font-semibold text-[#252735] leading-none">
+          <span className="text-xl sm:text-[26px] font-semibold text-[#252735] leading-none">
             {openEffort} h
           </span>
-          <span className="text-xs text-[#747683]">Open task effort</span>
+          <span className="text-[11px] sm:text-xs text-[#747683]">Open task effort</span>
         </div>
       </div>
 

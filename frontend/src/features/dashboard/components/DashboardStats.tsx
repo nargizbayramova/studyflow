@@ -67,17 +67,17 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
       {stats.map((s) => (
         <div
           key={s.label}
-          className="p-6 bg-white border border-[#E5E6EB] rounded-xl flex flex-col gap-4 shadow-sm"
+          className="p-4 sm:p-6 bg-white border border-[#E5E6EB] rounded-xl flex flex-col gap-2.5 sm:gap-4 shadow-sm"
         >
-          <span className="text-[13px] text-[#747683]">{s.label}</span>
-          <span className="text-[30px] font-normal text-[#252735] tracking-tight leading-none">
+          <span className="text-xs sm:text-[13px] text-[#747683] leading-snug">{s.label}</span>
+          <span className="text-2xl sm:text-[30px] font-normal text-[#252735] tracking-tight leading-none">
             {s.value}
           </span>
-          <span className="text-xs text-[#747683]">{s.caption}</span>
+          <span className="text-[11px] sm:text-xs text-[#747683]">{s.caption}</span>
         </div>
       ))}
     </div>

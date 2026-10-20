@@ -32,19 +32,21 @@ export const CoursesPage: React.FC = () => {
   const activeCourses = courses.filter((c) => !c.is_archived);
 
   return (
-    <div className="flex flex-col gap-7 max-w-7xl mx-auto font-sans">
+    <div className="flex flex-col gap-5 sm:gap-7 max-w-7xl mx-auto font-sans">
       {/* Top title and add button */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-[30px] font-normal text-[#252735] tracking-tight">Your courses</h1>
-          <p className="text-sm text-[#747683]">
+          <h1 className="text-2xl sm:text-[30px] font-normal text-[#252735] tracking-tight">
+            Your courses
+          </h1>
+          <p className="text-xs sm:text-sm text-[#747683]">
             One home for each subject. Keep coursework connected and easy to find.
           </p>
         </div>
 
         <button
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#5553B7] hover:bg-[#48469F] text-white text-sm font-semibold transition-colors shadow-sm self-start sm:self-auto cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#5553B7] hover:bg-[#48469F] text-white text-sm font-semibold transition-colors shadow-sm self-start sm:self-auto cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Add course</span>

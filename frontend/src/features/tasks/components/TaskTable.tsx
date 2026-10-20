@@ -26,10 +26,10 @@ export const TaskTable: React.FC<TaskTableProps> = ({
   onEdit,
 }) => {
   return (
-    <div className="bg-white border border-[#E5E6EB] rounded-xl p-5 shadow-sm flex flex-col gap-4">
+    <div className="bg-white border border-[#E5E6EB] rounded-xl p-4 sm:p-5 shadow-sm flex flex-col gap-4">
       {/* Table header bar */}
-      <div className="flex items-center justify-between pb-3 border-b border-[#F0F1F5]">
-        <div className="flex items-center gap-4 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#F0F1F5]">
+        <div className="flex items-center gap-3 sm:gap-4 text-xs">
           <button
             onClick={() => setTab("all")}
             className={`font-medium transition-colors cursor-pointer ${
@@ -57,11 +57,11 @@ export const TaskTable: React.FC<TaskTableProps> = ({
             Completed ({completedCount})
           </button>
         </div>
-        <span className="text-[11px] text-[#747683]">Completed tasks appear last</span>
+        <span className="hidden sm:inline text-[11px] text-[#747683]">Completed tasks appear last</span>
       </div>
 
-      {/* Headings */}
-      <div className="flex items-center gap-4 px-4 py-2.5 bg-[#F7F7F4] rounded-md text-[11px] font-semibold text-[#747683] uppercase tracking-wider">
+      {/* Desktop Headings */}
+      <div className="hidden md:flex items-center gap-4 px-4 py-2.5 bg-[#F7F7F4] rounded-md text-[11px] font-semibold text-[#747683] uppercase tracking-wider">
         <div className="w-[18px]" />
         <div className="flex-1">TASK / COURSE</div>
         <div className="w-[155px]">DEADLINE</div>

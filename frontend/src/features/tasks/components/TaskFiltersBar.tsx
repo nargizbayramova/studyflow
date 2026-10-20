@@ -58,11 +58,11 @@ export const TaskFiltersBar: React.FC<TaskFiltersBarProps> = ({
       </div>
 
       {/* Select Filters row */}
-      <div className="flex flex-wrap items-center gap-2.5">
+      <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2.5">
         <select
           value={selectedCourseId || ""}
           onChange={(e) => onCourseChange(e.target.value ? Number(e.target.value) : undefined)}
-          className="h-9 px-3 rounded-lg border border-[#E5E6EB] text-xs font-medium text-[#252735] bg-white hover:bg-slate-50 focus:outline-none focus:border-[#5553B7] cursor-pointer"
+          className="h-9 px-3 rounded-lg border border-[#E5E6EB] text-xs font-medium text-[#252735] bg-white hover:bg-slate-50 focus:outline-none focus:border-[#5553B7] cursor-pointer w-full sm:w-auto"
         >
           <option value="">All courses</option>
           {courses.map((c) => (
@@ -75,7 +75,7 @@ export const TaskFiltersBar: React.FC<TaskFiltersBarProps> = ({
         <select
           value={selectedType || ""}
           onChange={(e) => onTypeChange((e.target.value as TaskType) || undefined)}
-          className="h-9 px-3 rounded-lg border border-[#E5E6EB] text-xs font-medium text-[#252735] bg-white hover:bg-slate-50 focus:outline-none focus:border-[#5553B7] cursor-pointer"
+          className="h-9 px-3 rounded-lg border border-[#E5E6EB] text-xs font-medium text-[#252735] bg-white hover:bg-slate-50 focus:outline-none focus:border-[#5553B7] cursor-pointer w-full sm:w-auto"
         >
           <option value="">All types</option>
           <option value="assignment">Assignment</option>
@@ -87,7 +87,7 @@ export const TaskFiltersBar: React.FC<TaskFiltersBarProps> = ({
         <select
           value={selectedStatus || ""}
           onChange={(e) => onStatusChange((e.target.value as TaskStatus) || undefined)}
-          className="h-9 px-3 rounded-lg border border-[#E5E6EB] text-xs font-medium text-[#252735] bg-white hover:bg-slate-50 focus:outline-none focus:border-[#5553B7] cursor-pointer"
+          className="h-9 px-3 rounded-lg border border-[#E5E6EB] text-xs font-medium text-[#252735] bg-white hover:bg-slate-50 focus:outline-none focus:border-[#5553B7] cursor-pointer w-full sm:w-auto"
         >
           <option value="">All statuses</option>
           <option value="pending">Pending</option>
@@ -98,7 +98,7 @@ export const TaskFiltersBar: React.FC<TaskFiltersBarProps> = ({
         <select
           value={selectedPriority || ""}
           onChange={(e) => onPriorityChange((e.target.value as TaskPriority) || undefined)}
-          className="h-9 px-3 rounded-lg border border-[#E5E6EB] text-xs font-medium text-[#252735] bg-white hover:bg-slate-50 focus:outline-none focus:border-[#5553B7] cursor-pointer"
+          className="h-9 px-3 rounded-lg border border-[#E5E6EB] text-xs font-medium text-[#252735] bg-white hover:bg-slate-50 focus:outline-none focus:border-[#5553B7] cursor-pointer w-full sm:w-auto"
         >
           <option value="">All priorities</option>
           <option value="high">High</option>
