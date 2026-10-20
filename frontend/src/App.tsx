@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Analytics } from "@vercel/analytics/react";
 import { ToastProvider } from "@/context/ToastContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { WorkspaceProvider } from "@/context/WorkspaceContext";
@@ -59,6 +60,7 @@ export const App: React.FC = () => {
           </AuthProvider>
         </ToastProvider>
       </BrowserRouter>
+      <Analytics />
     </QueryClientProvider>
   );
 };
