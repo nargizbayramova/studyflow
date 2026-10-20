@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { Menu } from "lucide-react";
+import { Analytics } from "@vercel/analytics/react";
 import { Sidebar } from "./Sidebar";
 
 import { useWorkspace } from "@/context/WorkspaceContext";
@@ -58,6 +59,7 @@ export const AppLayout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+      <Analytics />
     </div>
   );
 };
