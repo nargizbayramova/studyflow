@@ -4,9 +4,11 @@ shortcut: counters live in process memory, so each uvicorn worker alerts indepen
 state resets on restart; move windows to Redis/Postgres when running more than one worker.
 """
 import asyncio
-import logging
-import time
 from collections import deque
+import contextlib
+import logging
+import os
+import time
 
 import httpx
 from sqlalchemy import exc as sa_exc
@@ -17,13 +19,14 @@ from app.core.database import engine
 
 logger = logging.getLogger("studyflow.monitoring")
 
-ALERT_COOLDOWN_S = 300  # same rule re-alerts at most every 5 min, so an outage doesn't spam the channel
+ALERT_COOLDOWN_S = int(os.getenv("ALERT_COOLDOWN_S", "10" if settings.ENVIRONMENT == "development" else "300"))
 HEALTH_INTERVAL_S = 60
 HEALTH_FAILS = 3
-LATENCY_WINDOW_S, LATENCY_THRESHOLD_S, LATENCY_MIN_SAMPLES = 300, 3.5, 5
+AI_ERRORS, AI_WINDOW_S = 3, 300
+LATENCY_WINDOW_S, LATENCY_THRESHOLD_S, LATENCY_MIN_SAMPLES = 300, 3.5, 1
 DB_ERRORS, DB_WINDOW_S = 2, 60
 SERVER_ERRORS, SERVER_WINDOW_S = 3, 120
-LOGIN_FAILS, LOGIN_WINDOW_S = 5, 180
+LOGIN_FAILS, LOGIN_WINDOW_S = 3, 180
 
 
 class SlidingWindow:
@@ -41,13 +44,22 @@ class SlidingWindow:
             q.popleft()
         return len(q)
 
-    def reset(self, key: str) -> None:
+    def count(self, key: str = "*", now: float | None = None) -> int:
+        now = time.monotonic() if now is None else now
+        q = self.hits.get(key)
+        if not q:
+            return 0
+        while q and q[0] <= now - self.seconds:
+            q.popleft()
+        return len(q)
+
+    def reset(self, key: str = "*") -> None:
         self.hits.pop(key, None)
 
     def sweep(self, now: float | None = None) -> None:
         """Drop stale keys so sprayed keys (e.g. random emails) can't grow memory forever."""
         cutoff = (time.monotonic() if now is None else now) - self.seconds
-        for key in [k for k, q in self.hits.items() if q[-1] <= cutoff]:
+        for key in [k for k, q in self.hits.items() if not q or q[-1] <= cutoff]:
             del self.hits[key]
 
 
@@ -68,6 +80,7 @@ class RollingAverage:
         return self.total / len(self.samples), len(self.samples)
 
 
+ai_errors = SlidingWindow(AI_WINDOW_S)
 server_errors = SlidingWindow(SERVER_WINDOW_S)
 db_errors = SlidingWindow(DB_WINDOW_S)
 failed_logins = SlidingWindow(LOGIN_WINDOW_S)
@@ -81,29 +94,64 @@ def _utc_now() -> str:
     return time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
 
 
-def alert(rule: str, message: str) -> None:
+def _telegram_credentials() -> tuple[str | None, str | None]:
+    token = os.getenv("TELEGRAM_BOT_TOKEN") or settings.TELEGRAM_BOT_TOKEN
+    chat_id = os.getenv("TELEGRAM_CHAT_ID") or settings.TELEGRAM_CHAT_ID
+    return token, chat_id
+
+
+def alert(rule: str, message: str, cooldown_s: int | None = None) -> None:
     """Log and fire-and-forget a Telegram message, rate-limited per rule."""
     now = time.monotonic()
-    if now - _last_alert.get(rule, -ALERT_COOLDOWN_S) < ALERT_COOLDOWN_S:
+    limit = cooldown_s if cooldown_s is not None else ALERT_COOLDOWN_S
+    if now - _last_alert.get(rule, -limit) < limit:
         return
     _last_alert[rule] = now
-    logger.warning(message)
-    if _client and settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_CHAT_ID:
-        task = asyncio.create_task(_send_telegram(message))
+    if message.startswith("[SUCCESS]"):
+        logger.info(message)
+    else:
+        logger.warning(message)
+    token, chat_id = _telegram_credentials()
+    if _client and token and chat_id:
+        task = asyncio.create_task(_send_telegram(token, chat_id, message))
         _bg_tasks.add(task)  # keep a reference so the task isn't garbage-collected mid-flight
         task.add_done_callback(_bg_tasks.discard)
 
 
-async def _send_telegram(message: str) -> None:
-    url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
+async def _send_telegram(token: str, chat_id: str, message: str) -> None:
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
     try:
-        r = await _client.post(url, json={"chat_id": settings.TELEGRAM_CHAT_ID, "text": message})
+        r = await _client.post(url, json={"chat_id": chat_id, "text": message})
         r.raise_for_status()
     except httpx.HTTPError as e:
         logger.error("Telegram alert failed: %s", type(e).__name__)  # never log the URL: it holds the token
 
 
 # --- Rules -----------------------------------------------------------------------------------
+
+def record_ai_success(action: str, details: str, user_id: int | None = None) -> None:
+    prior_fails = ai_errors.count()
+    ai_errors.reset()
+    user_str = f" for user #{user_id}" if user_id is not None else ""
+    recovery_note = f" (recovered from {prior_fails} recent failures)" if prior_fails >= AI_ERRORS else ""
+    msg = f"[SUCCESS] ✅ AI {action}{user_str}: {details}.{recovery_note}"
+    alert(f"ai_success:{action}:{user_id}", msg, cooldown_s=5)
+
+
+def record_ai_failure(e: Exception | None = None) -> None:
+    if e is not None:
+        if getattr(e, "_ai_monitored", False):
+            return
+        with contextlib.suppress(Exception):
+            setattr(e, "_ai_monitored", True)
+    if ai_errors.hit() >= AI_ERRORS:
+        alert(
+            "ai_service",
+            f"[ALERT] AI Service Degradation: At least {AI_ERRORS} AI scheduling requests "
+            "failed or timed out within the last 5 minutes. Check API quota, "
+            "provider availability, and network connectivity.",
+        )
+
 
 def record_latency(seconds: float) -> None:
     avg, n = latency.add(seconds)
@@ -112,24 +160,51 @@ def record_latency(seconds: float) -> None:
                          f"over the last 5 minutes (threshold: {LATENCY_THRESHOLD_S}s).")
 
 
-def record_exception(e: Exception) -> None:
-    if isinstance(e, (sa_exc.OperationalError, sa_exc.InterfaceError, sa_exc.TimeoutError)):
-        if db_errors.hit() >= DB_ERRORS:
-            alert("database", "[CRITICAL] Database Connection Error: PostgreSQL connection pool "
-                              f"exhausted or database unreachable ({DB_ERRORS} errors in 1 min).")
+def record_db_error() -> None:
+    if db_errors.hit() >= DB_ERRORS:
+        alert("database", "[CRITICAL] Database Connection Error: PostgreSQL connection pool "
+                          f"exhausted or database unreachable ({DB_ERRORS} errors in 1 min).")
+
+
+def record_server_error() -> None:
     if server_errors.hit() >= SERVER_ERRORS:
         alert("server_errors", f"[ALERT] Unhandled Exceptions: {SERVER_ERRORS} HTTP 500 errors "
                                "recorded in the last 2 minutes. Inspect backend error logs immediately.")
 
 
-def record_login(email: str, ip: str, success: bool) -> None:
+def record_exception(e: Exception) -> None:
+    if isinstance(e, (sa_exc.OperationalError, sa_exc.InterfaceError, sa_exc.TimeoutError)):
+        record_db_error()
+    record_server_error()
+
+
+def record_login(email: str, ip: str, success: bool, user_id: int | None = None) -> None:
+    account_label = f"account user_id #{user_id}" if user_id is not None else f"account {email}"
+    email_key = f"email:{email}"
+    ip_key = f"ip:{ip}"
     if success:
-        failed_logins.reset(f"email:{email}")
+        prior_fails = failed_logins.count(email_key)
+        failed_logins.reset(email_key)
+        _last_alert.pop(f"login:{email_key}", None)
+        if prior_fails >= LOGIN_FAILS:
+            alert(
+                f"login_success:{email_key}",
+                f"[SECURITY] Login Alert: Successful login for {account_label} "
+                f"following {prior_fails} consecutive failed attempts.",
+            )
         return
-    for key in (f"email:{email}", f"ip:{ip}"):
-        if failed_logins.hit(key) >= LOGIN_FAILS:
-            alert(f"login:{key}", f"[SECURITY] Brute-Force Alert: {LOGIN_FAILS} failed login attempts "
-                                  f"detected for {key} within 3 minutes.")
+    if failed_logins.hit(email_key) >= LOGIN_FAILS:
+        alert(
+            f"login:{email_key}",
+            f"[SECURITY] Login Alert: {LOGIN_FAILS} consecutive failed login attempts "
+            f"detected for {account_label} within 3 minutes.",
+        )
+    if failed_logins.hit(ip_key) >= LOGIN_FAILS:
+        alert(
+            f"login:{ip_key}",
+            f"[SECURITY] Login Alert: {LOGIN_FAILS} consecutive failed login attempts "
+            f"detected for IP {ip} within 3 minutes.",
+        )
 
 
 # --- Background health probe -----------------------------------------------------------------

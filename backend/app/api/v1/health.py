@@ -4,6 +4,7 @@ from sqlalchemy import text
 from app.api.deps import DbSession
 from app.core.config import settings
 from app.schemas.health import HealthResponse
+from app.services import monitoring
 
 router = APIRouter(tags=["Health"])
 
@@ -20,5 +21,6 @@ async def health(response: Response, db: DbSession) -> HealthResponse:
         await db.execute(text("SELECT 1"))
         return HealthResponse(status="ok", database="up", version=settings.VERSION)
     except Exception:
+        monitoring.record_db_error()
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return HealthResponse(status="degraded", database="down", version=settings.VERSION)

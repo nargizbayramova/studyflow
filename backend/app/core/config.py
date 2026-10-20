@@ -1,13 +1,19 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
+_ROOT_DIR = _BACKEND_DIR.parent
 
 
 class Settings(BaseSettings):
     """Application settings, loaded from environment variables / .env file."""
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(_BACKEND_DIR / ".env", _ROOT_DIR / ".env", ".env"), extra="ignore"
+    )
 
     PROJECT_NAME: str = "StudyFlow API"
     VERSION: str = "0.1.0"

@@ -39,7 +39,9 @@ async def login(
         verify_password, form.password, user.hashed_password if user else DUMMY_HASH
     )
     ok = ok and user is not None and user.is_active
-    monitoring.record_login(email, request.client.host if request.client else "?", ok)
+    monitoring.record_login(
+        email, request.client.host if request.client else "?", ok, user.id if user else None
+    )
     if not ok:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, "Incorrect email or password",

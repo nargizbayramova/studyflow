@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.api.v1 import health
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.services import monitoring
@@ -112,9 +113,17 @@ async def monitor_requests(request: Request, call_next) -> Response:
     start = time.perf_counter()
     try:
         response = await call_next(request)
+        duration = time.perf_counter() - start
+        if response.status_code >= 500 and response.status_code != 502 and response.status_code != 503:
+            monitoring.record_server_error()
+        if request.url.path in ("/api/v1/schedule/generate", "/api/v1/schedule/rebalance", "/api/v1/tasks/prioritize"):
+            if response.status_code in (429, 502, 504) or duration > 10.0:
+                monitoring.record_ai_failure()
     except Exception as e:
         logger.exception("Unhandled error on %s %s", request.method, request.url.path)
         monitoring.record_exception(e)
+        if request.url.path in ("/api/v1/schedule/generate", "/api/v1/schedule/rebalance", "/api/v1/tasks/prioritize"):
+            monitoring.record_ai_failure(e)
         error_data = ErrorResponse(
             detail="Internal Server Error",
             error_code="INTERNAL_SERVER_ERROR",
@@ -135,6 +144,7 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+app.include_router(health.router, prefix="/api", include_in_schema=False)
 
 
 @app.get("/", include_in_schema=False)
