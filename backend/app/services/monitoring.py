@@ -90,6 +90,13 @@ _bg_tasks: set[asyncio.Task] = set()
 _client: httpx.AsyncClient | None = None
 
 
+async def _get_client() -> httpx.AsyncClient:
+    global _client
+    if _client is None or _client.is_closed:
+        _client = httpx.AsyncClient(timeout=10)
+    return _client
+
+
 def _utc_now() -> str:
     return time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
 
@@ -112,19 +119,41 @@ def alert(rule: str, message: str, cooldown_s: int | None = None) -> None:
     else:
         logger.warning(message)
     token, chat_id = _telegram_credentials()
-    if _client and token and chat_id:
-        task = asyncio.create_task(_send_telegram(token, chat_id, message))
-        _bg_tasks.add(task)  # keep a reference so the task isn't garbage-collected mid-flight
+    if not (token and chat_id):
+        logger.warning("Telegram alert skipped: bot token or chat ID not set in environment.")
+        return
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        task = loop.create_task(_send_telegram(token, chat_id, message))
+        _bg_tasks.add(task)
         task.add_done_callback(_bg_tasks.discard)
+    else:
+        # Fallback when alert is invoked outside of an active running loop
+        try:
+            asyncio.run(_send_telegram(token, chat_id, message))
+        except Exception as exc:
+            logger.exception("Failed to run sync fallback for Telegram alert: %s", exc)
 
 
 async def _send_telegram(token: str, chat_id: str, message: str) -> None:
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     try:
-        r = await _client.post(url, json={"chat_id": chat_id, "text": message})
-        r.raise_for_status()
+        client = await _get_client()
+        r = await client.post(url, json={"chat_id": chat_id, "text": message})
+        if r.status_code != 200:
+            logger.error("Telegram API returned HTTP %d: %s", r.status_code, r.text)
+        else:
+            logger.info("Telegram alert delivered successfully: %s", r.json().get("result", {}).get("message_id"))
     except httpx.HTTPError as e:
-        logger.error("Telegram alert failed: %s", type(e).__name__)  # never log the URL: it holds the token
+        detail = f": {e.response.text}" if hasattr(e, "response") and e.response is not None else ""
+        logger.error("Telegram alert request failed: %s%s", type(e).__name__, detail)
+    except Exception as e:
+        logger.exception("Unexpected error in _send_telegram: %s", e)
 
 
 # --- Rules -----------------------------------------------------------------------------------

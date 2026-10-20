@@ -80,15 +80,9 @@ async def generate_schedule(
     semester: str | None = None,
     tz: Annotated[str, Query(max_length=64, description="IANA timezone, e.g. Asia/Baku")] = "UTC",
 ) -> ScheduleResponse:
-    res = await run_ai_schedule(
+    return await run_ai_schedule(
         db, user.id, semester, tz, rebalance=False, generate_fn=generate_structured
     )
-    monitoring.record_ai_success(
-        action="Schedule Generation",
-        user_id=user.id,
-        details=f"Generated {len(res.study_blocks)} study blocks",
-    )
-    return res
 
 
 @router.post(
@@ -102,12 +96,6 @@ async def rebalance_schedule(
     semester: str | None = None,
     tz: Annotated[str, Query(max_length=64, description="IANA timezone, e.g. Asia/Baku")] = "UTC",
 ) -> ScheduleResponse:
-    res = await run_ai_schedule(
+    return await run_ai_schedule(
         db, user.id, semester, tz, rebalance=True, generate_fn=generate_structured
     )
-    monitoring.record_ai_success(
-        action="Schedule Rebalance",
-        user_id=user.id,
-        details=f"Rebalanced {len(res.study_blocks)} study blocks",
-    )
-    return res

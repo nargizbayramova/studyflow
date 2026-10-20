@@ -454,10 +454,18 @@ async def run_ai_schedule(
         ai_schedule, user_id, user_tz, task_map, valid_window_intervals
     )
 
+    action = "Schedule Rebalance" if rebalance else "Schedule Generation"
     if rebalance:
-        return await _persist_rebalanced_schedule(
+        res = await _persist_rebalanced_schedule(
             db, user_id, today_start, created_pairs, task_map, overload_flag
         )
-    return await _persist_generated_schedule(
-        db, user_id, today_start, created_pairs, task_map, overload_flag
+    else:
+        res = await _persist_generated_schedule(
+            db, user_id, today_start, created_pairs, task_map, overload_flag
+        )
+    monitoring.record_ai_success(
+        action=action,
+        user_id=user_id,
+        details=f"{'Rebalanced' if rebalance else 'Generated'} {len(res.study_blocks)} study blocks",
     )
+    return res
