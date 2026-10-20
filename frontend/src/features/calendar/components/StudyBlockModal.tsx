@@ -123,21 +123,23 @@ const StudyBlockModalContent: React.FC<StudyBlockModalProps> = ({
               >
                 ✓ Done
               </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  await updateBlockStatus(block, "missed");
-                  onClose();
-                }}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                  block.status === "missed"
-                    ? "bg-rose-600 text-white"
-                    : "bg-white hover:bg-rose-50 text-rose-700 border border-rose-200"
-                }`}
-                title={block.status === "missed" ? "Undo Missed" : "Mark Missed"}
-              >
-                ✕ Missed
-              </button>
+              {(new Date(block.end_at).getTime() <= Date.now() || block.status === "missed") && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await updateBlockStatus(block, "missed");
+                    onClose();
+                  }}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                    block.status === "missed"
+                      ? "bg-rose-600 text-white"
+                      : "bg-white hover:bg-rose-50 text-rose-700 border border-rose-200"
+                  }`}
+                  title={block.status === "missed" ? "Undo Missed" : "Mark Missed"}
+                >
+                  ✕ Missed
+                </button>
+              )}
             </div>
             <button
               type="button"

@@ -118,6 +118,8 @@ export const TodayStudyPlan: React.FC<TodayStudyPlanProps> = ({
             const title = block.task_title || task?.title || "Focus Study Session";
             const isCompleted = block.status === "completed";
             const isMissed = block.status === "missed";
+            const isPast = new Date(block.end_at).getTime() <= Date.now();
+            const canMarkMissed = isPast || isMissed;
 
             return (
               <div
@@ -143,17 +145,19 @@ export const TodayStudyPlan: React.FC<TodayStudyPlanProps> = ({
                     >
                       ✓ Done
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => void updateBlockStatus(block, "missed")}
-                      className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors cursor-pointer ${
-                        isMissed
-                          ? "bg-rose-600 text-white"
-                          : "bg-white hover:bg-rose-50 text-rose-700 border border-rose-200"
-                      }`}
-                    >
-                      ✕ Missed
-                    </button>
+                    {canMarkMissed && (
+                      <button
+                        type="button"
+                        onClick={() => void updateBlockStatus(block, "missed")}
+                        className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors cursor-pointer ${
+                          isMissed
+                            ? "bg-rose-600 text-white"
+                            : "bg-white hover:bg-rose-50 text-rose-700 border border-rose-200"
+                        }`}
+                      >
+                        ✕ Missed
+                      </button>
+                    )}
                   </div>
                 </div>
                 <h4 className={`text-sm font-semibold text-[#252735] line-clamp-1 ${isCompleted ? "line-through" : ""}`}>

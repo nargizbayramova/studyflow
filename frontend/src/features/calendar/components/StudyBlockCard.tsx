@@ -33,6 +33,8 @@ export const StudyBlockCard: React.FC<StudyBlockCardProps> = ({
   const title = block.task_title || "Study Session";
   const isCompleted = block.status === "completed";
   const isMissed = block.status === "missed";
+  const isPast = new Date(block.end_at).getTime() <= Date.now();
+  const canMarkMissed = isPast || isMissed;
   const timeRange = formatTimeRange(block.start_at, block.end_at);
 
   const actionButtons = onStatusChange && (
@@ -52,18 +54,20 @@ export const StudyBlockCard: React.FC<StudyBlockCardProps> = ({
       >
         ✓ Done
       </button>
-      <button
-        type="button"
-        onClick={() => onStatusChange(block, "missed")}
-        className={`px-1.5 py-0.5 rounded text-[10px] leading-tight font-semibold transition-colors cursor-pointer ${
-          isMissed
-            ? "bg-rose-600 text-white"
-            : "bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs"
-        }`}
-        title={isMissed ? "Undo Missed" : "Mark Missed"}
-      >
-        ✕ Missed
-      </button>
+      {canMarkMissed && (
+        <button
+          type="button"
+          onClick={() => onStatusChange(block, "missed")}
+          className={`px-1.5 py-0.5 rounded text-[10px] leading-tight font-semibold transition-colors cursor-pointer ${
+            isMissed
+              ? "bg-rose-600 text-white"
+              : "bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs"
+          }`}
+          title={isMissed ? "Undo Missed" : "Mark Missed"}
+        >
+          ✕ Missed
+        </button>
+      )}
     </div>
   );
 
