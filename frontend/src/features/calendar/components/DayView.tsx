@@ -18,6 +18,7 @@ interface DayViewProps {
   dayBlocks: StudyBlock[];
   onSelectBlock: (block: StudyBlock) => void;
   onSelectSlot: (date: Date) => void;
+  onStatusChange?: (block: StudyBlock, status: "completed" | "missed") => void;
 }
 
 export const DayView: React.FC<DayViewProps> = ({
@@ -25,6 +26,7 @@ export const DayView: React.FC<DayViewProps> = ({
   dayBlocks,
   onSelectBlock,
   onSelectSlot,
+  onStatusChange,
 }) => {
   const today = isToday(currentDate);
   const currentLineTop = getCurrentTimeOffset(HOUR_HEIGHT);
@@ -82,6 +84,7 @@ export const DayView: React.FC<DayViewProps> = ({
                 block={b}
                 hourHeight={HOUR_HEIGHT}
                 onSelect={onSelectBlock}
+                onStatusChange={onStatusChange}
               />
             ))}
           </div>

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
+import { notifyRebalanceNeeded } from "@/hooks/useSchedule";
 import { Task, TaskCreatePayload, TaskFilters, TaskUpdatePayload } from "@/types";
 
 export const taskKeys = {
@@ -38,6 +39,9 @@ export function useCreateTask() {
         body: JSON.stringify(newTask),
       }),
     onSuccess: () => {
+      notifyRebalanceNeeded(
+        "New task deadline added — rebalance your schedule to allocate study sessions."
+      );
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
     },
   });
@@ -51,7 +55,16 @@ export function useUpdateTask() {
         method: "PATCH",
         body: JSON.stringify(data),
       }),
-    onSuccess: (_, { id }) => {
+    onSuccess: (_, { id, data }) => {
+      if (data.status && data.status !== "completed") {
+        notifyRebalanceNeeded(
+          "Task reopened as incomplete — rebalance your schedule to fit remaining effort."
+        );
+      } else if (data.due_date || data.estimated_hours) {
+        notifyRebalanceNeeded(
+          "Task deadline or effort updated — rebalance your schedule to adjust study blocks."
+        );
+      }
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
       queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) });
     },

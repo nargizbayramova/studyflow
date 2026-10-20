@@ -26,7 +26,9 @@ interface CalendarHeaderProps {
   onToday: () => void;
   onAddBlock: () => void;
   onGenerateSchedule: () => void;
+  onRebalanceSchedule: () => void;
   isGenerating: boolean;
+  isRebalancing: boolean;
   totalScheduledHours: number;
 }
 
@@ -40,9 +42,12 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   onToday,
   onAddBlock,
   onGenerateSchedule,
+  onRebalanceSchedule,
   isGenerating,
+  isRebalancing,
   totalScheduledHours,
 }) => {
+  const busy = isGenerating || isRebalancing;
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -53,14 +58,22 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
           <button
             onClick={onGenerateSchedule}
-            disabled={isGenerating}
+            disabled={busy}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#5553B7] bg-[#EFEEF9] hover:bg-[#E2E0F5] disabled:opacity-60 text-[#5553B7] text-sm font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
           >
             <Sparkles className="w-4 h-4" />
             <span>{isGenerating ? "Generating..." : "Generate AI Schedule"}</span>
+          </button>
+
+          <button
+            onClick={onRebalanceSchedule}
+            disabled={busy}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[#E5E6EB] bg-white hover:bg-slate-50 disabled:opacity-60 text-[#252735] text-sm font-semibold transition-colors shadow-2xs cursor-pointer disabled:cursor-not-allowed"
+          >
+            <span>{isRebalancing ? "Rebalancing..." : "🔄 Rebalance Schedule"}</span>
           </button>
 
           <button

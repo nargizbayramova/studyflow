@@ -23,8 +23,13 @@ export const CalendarPage: React.FC = () => {
     lastGenerated,
     clearLastGenerated,
     isGenerating,
+    isRebalancing,
+    rebalancePrompt,
+    dismissRebalancePrompt,
     error,
     generateSchedule,
+    rebalanceSchedule,
+    updateBlockStatus,
   } = useSchedule();
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   const [viewMode, setViewMode] = useState<CalendarViewMode>("week");
@@ -38,6 +43,12 @@ export const CalendarPage: React.FC = () => {
     () => getViewScheduledHours(blocks, currentDate, viewMode, weekDays),
     [blocks, currentDate, viewMode, weekDays]
   );
+  const hasMissedBlocks = useMemo(() => blocks.some((b) => b.status === "missed"), [blocks]);
+  const activeRebalanceReason =
+    rebalancePrompt ||
+    (hasMissedBlocks
+      ? "You have missed study sessions. Rebalance your schedule to redistribute remaining effort."
+      : null);
 
   const openCreateModal = (slot?: Date) => {
     setSelectedBlock(null);
@@ -69,9 +80,36 @@ export const CalendarPage: React.FC = () => {
         onToday={() => setCurrentDate(new Date())}
         onAddBlock={() => openCreateModal()}
         onGenerateSchedule={() => void generateSchedule()}
+        onRebalanceSchedule={() => void rebalanceSchedule()}
         isGenerating={isGenerating}
+        isRebalancing={isRebalancing}
         totalScheduledHours={totalScheduledHours}
       />
+
+      {activeRebalanceReason && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-[#EFEEF9] border border-[#CAC7EA] text-[#252735] text-xs font-medium">
+          <span>{activeRebalanceReason}</span>
+          <div className="flex items-center gap-2 self-start sm:self-auto flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => void rebalanceSchedule()}
+              disabled={isRebalancing || isGenerating}
+              className="px-3 py-1.5 rounded-lg bg-[#5553B7] hover:bg-[#48469F] disabled:opacity-60 text-white text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
+            >
+              {isRebalancing ? "Rebalancing..." : "🔄 Rebalance Now"}
+            </button>
+            {rebalancePrompt && (
+              <button
+                type="button"
+                onClick={dismissRebalancePrompt}
+                className="px-2 py-1 text-[#747683] hover:text-[#252735] text-xs cursor-pointer"
+              >
+                Dismiss
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {overloadWarning && (
         <div className="flex items-center gap-3 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-medium">
@@ -94,6 +132,7 @@ export const CalendarPage: React.FC = () => {
           blocksByDate={blocksByDate}
           onSelectBlock={openEditModal}
           onSelectSlot={openCreateModal}
+          onStatusChange={(b, status) => void updateBlockStatus(b, status)}
         />
       )}
 
@@ -103,6 +142,7 @@ export const CalendarPage: React.FC = () => {
           dayBlocks={blocksByDate.get(toDateKey(currentDate)) ?? []}
           onSelectBlock={openEditModal}
           onSelectSlot={openCreateModal}
+          onStatusChange={(b, status) => void updateBlockStatus(b, status)}
         />
       )}
 

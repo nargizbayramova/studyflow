@@ -472,3 +472,125 @@ async def test_prioritize_tasks_endpoint(monkeypatch):
     mock_db.execute.assert_awaited_once()
     mock_db.commit.assert_awaited_once()
 
+
+@pytest.mark.anyio
+async def test_rebalance_schedule_preserves_completed_and_recalculates_effort(monkeypatch):
+    import json
+    from unittest.mock import AsyncMock, MagicMock
+    from app.api.v1 import schedule as schedule_api
+    from app.schemas.schedule import AIGeneratedSchedule, AIStudyBlockItem
+
+    paths = app.openapi()["paths"]
+    assert "/api/v1/schedule/rebalance" in paths
+    assert "/api/v1/schedule/blocks/{block_id}/status" in paths
+
+    now = datetime.now(UTC)
+    course = MagicMock(code="CS401", color="#4F46E5", title="Algorithms")
+
+    # Completed 1.5h block + missed 1.0h block on a 4.0h task -> remaining should be 2.5h
+    completed_block = MagicMock(
+        id=11,
+        task_id=50,
+        start_at=now - timedelta(days=1, hours=2),
+        end_at=now - timedelta(days=1, hours=0, minutes=30),
+        status=BlockStatus.COMPLETED,
+    )
+    missed_block = MagicMock(
+        id=12,
+        task_id=50,
+        start_at=now - timedelta(hours=3),
+        end_at=now - timedelta(hours=2),
+        status=BlockStatus.MISSED,
+    )
+    mock_task = MagicMock(
+        id=50,
+        title="Graph Theory Project",
+        due_date=now + timedelta(days=4),
+        estimated_hours=4.0,
+        weight_percent=30.0,
+        course=course,
+        study_blocks=[completed_block, missed_block],
+    )
+    mock_slot = MagicMock(
+        day_of_week=0,
+        start_time=time(9, 0),
+        end_time=time(12, 0),
+        kind=SlotKind.AVAILABLE,
+    )
+
+    today = now.date()
+    monday_offset = (0 - today.weekday()) % 7 or 7
+    next_monday_str = (today + timedelta(days=monday_offset)).isoformat()
+
+    fake_ai = AIGeneratedSchedule(
+        study_blocks=[
+            AIStudyBlockItem(
+                task_id=50,
+                date=next_monday_str,
+                start_time="09:00",
+                end_time="11:00",
+                focus_goal="Implement Dijkstra and bellman-ford",
+            )
+        ],
+        overload_warning=False,
+    )
+
+    captured_payloads: list[dict] = []
+
+    async def _fake_generate(prompt, payload, schema):
+        captured_payloads.append(json.loads(payload))
+        return fake_ai
+
+    monkeypatch.setattr(schedule_api, "generate_structured", _fake_generate)
+
+    added_blocks: list = []
+
+    class FakeScalarResult:
+        def __init__(self, items):
+            self._items = items
+
+        def unique(self):
+            return self._items
+
+        def __iter__(self):
+            return iter(self._items)
+
+    # scalars call 1: tasks; call 2: availability slots; call 3: all blocks (completed + newly added)
+    def _scalars_side_effect(_stmt):
+        call_idx = mock_db.scalars.call_count
+        if call_idx == 1:
+            return FakeScalarResult([mock_task])
+        if call_idx == 2:
+            return FakeScalarResult([mock_slot])
+        return FakeScalarResult([completed_block, *added_blocks])
+
+    mock_db = MagicMock()
+    mock_db.scalars = AsyncMock(side_effect=_scalars_side_effect)
+    mock_db.execute = AsyncMock()
+    mock_db.flush = AsyncMock()
+    mock_db.commit = AsyncMock()
+
+    def _add_all(objs):
+        for idx, o in enumerate(objs, start=200):
+            o.id = idx
+            added_blocks.append(o)
+
+    mock_db.add_all = MagicMock(side_effect=_add_all)
+
+    mock_user = MagicMock(id=9)
+    res = await schedule_api.rebalance_schedule(user=mock_user, db=mock_db, semester="Fall 2026")
+
+    # Verify remaining effort calculation: 4.0h estimated - 1.5h completed = 2.5h (missed ignored)
+    assert len(captured_payloads) == 1
+    sent_task = captured_payloads[0]["tasks_to_reschedule"][0]
+    assert sent_task["task_id"] == 50
+    assert sent_task["remaining_effort_hours"] == 2.5
+
+    # Verify bulk insert called and response includes preserved completed block + new planned block
+    mock_db.add_all.assert_called_once()
+    assert len(res.study_blocks) == 2
+    statuses = {b.id: b.status for b in res.study_blocks}
+    assert statuses[11] == "completed"
+    assert statuses[200] == "planned"
+
+

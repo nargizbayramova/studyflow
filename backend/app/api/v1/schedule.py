@@ -4,12 +4,17 @@ from typing import Annotated
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy import delete, select
-from sqlalchemy.orm import joinedload
+from sqlalchemy import delete, or_, select, update
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.api.deps import CurrentUser, DbSession, Paging
 from app.models import AvailabilitySlot, BlockStatus, Course, SlotKind, StudyBlock, Task, TaskStatus
-from app.schemas.schedule import AIGeneratedSchedule, ScheduleResponse, StudyBlockOut
+from app.schemas.schedule import (
+    AIGeneratedSchedule,
+    BlockStatusUpdate,
+    ScheduleResponse,
+    StudyBlockOut,
+)
 from app.services.ai_client import generate_structured
 
 router = APIRouter(prefix="/schedule", tags=["Schedule"])
@@ -78,9 +83,9 @@ def _parse_block_datetimes(
 
 
 def _to_study_block_out(block: StudyBlock, task: Task, focus_goal: str = "") -> StudyBlockOut:
-    course = task.course
+    course = getattr(task, "course", None)
     return StudyBlockOut(
-        id=block.id,
+        id=block.id or 0,
         task_id=block.task_id,
         date=block.start_at.strftime("%Y-%m-%d"),
         start_time=block.start_at.strftime("%H:%M"),
@@ -95,65 +100,12 @@ def _to_study_block_out(block: StudyBlock, task: Task, focus_goal: str = "") -> 
     )
 
 
-@router.get("", response_model=ScheduleResponse, summary="Get current study schedule (FR-06)")
-async def get_schedule(
-    user: CurrentUser,
-    db: DbSession,
-    page: Paging,
-    semester: str | None = None,
-) -> ScheduleResponse:
-    stmt = (
-        select(StudyBlock)
-        .options(joinedload(StudyBlock.task).joinedload(Task.course))
-        .where(StudyBlock.user_id == user.id)
-    )
-    if semester:
-        stmt = stmt.join(StudyBlock.task).join(Task.course).where(Course.semester == semester)
-    stmt = stmt.order_by(StudyBlock.start_at, StudyBlock.id).limit(page.limit).offset(page.offset)
-    blocks = list((await db.scalars(stmt)).unique())
-    return ScheduleResponse(
-        study_blocks=[_to_study_block_out(b, b.task) for b in blocks if b.task],
-        overload_warning=False,
-    )
-
-
-@router.post(
-    "/generate",
-    response_model=ScheduleResponse,
-    summary="Generate AI-powered dynamic study schedule (FR-06)",
-)
-async def generate_schedule(
-    user: CurrentUser,
-    db: DbSession,
-    semester: str | None = None,
-    tz: Annotated[str, Query(max_length=64, description="IANA timezone, e.g. Asia/Baku")] = "UTC",
-) -> ScheduleResponse:
-    user_tz = _resolve_tz(tz)
-    # Query 1: incomplete tasks joined with Course
-    task_stmt = (
-        select(Task)
-        .join(Task.course)
-        .options(joinedload(Task.course))
-        .where(
-            Task.user_id == user.id,
-            Task.status != TaskStatus.COMPLETED,
-            Course.is_archived.is_(False),
-        )
-    )
-    if semester:
-        task_stmt = task_stmt.where(Course.semester == semester)
-    task_stmt = task_stmt.order_by(Task.due_date).limit(100)
-    tasks = list((await db.scalars(task_stmt)).unique())
-    if not tasks:
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST,
-            "No pending tasks found to schedule. Add a task first.",
-        )
-
-    # Query 2: weekly availability slots (both AVAILABLE and BLOCKED) in 1 query
+async def _load_concrete_windows(
+    db: DbSession, user_id: int, today: date, now_time: time
+) -> tuple[list[dict], dict[str, list[tuple[int, int]]]]:
     slot_stmt = (
         select(AvailabilitySlot)
-        .where(AvailabilitySlot.user_id == user.id)
+        .where(AvailabilitySlot.user_id == user_id)
         .order_by(AvailabilitySlot.day_of_week, AvailabilitySlot.start_time)
         .limit(200)
     )
@@ -170,12 +122,6 @@ async def generate_schedule(
             "No available study hours configured. Add weekly availability slots first.",
         )
 
-    now_local = datetime.now(user_tz)
-    today = now_local.date()
-    now_time = now_local.time()
-    task_map: dict[int, Task] = {t.id: t for t in tasks}
-
-    # Deterministically calculate concrete available calendar windows for next 14 days
     concrete_windows: list[dict] = []
     valid_window_intervals: dict[str, list[tuple[int, int]]] = {}
 
@@ -189,7 +135,6 @@ async def generate_schedule(
 
         for a in day_avails:
             for st, et in _subtract_intervals(a, day_blocked):
-                # If today, skip windows that ended in the past
                 if cur_date == today and et <= now_time:
                     continue
                 actual_st = st
@@ -216,6 +161,146 @@ async def generate_schedule(
             "All configured study windows for the upcoming days are blocked or in the past. Update your availability.",
         )
 
+    return concrete_windows, valid_window_intervals
+
+
+def _validate_ai_blocks(
+    ai_schedule: AIGeneratedSchedule,
+    user_id: int,
+    user_tz: tzinfo,
+    task_map: dict[int, Task],
+    valid_window_intervals: dict[str, list[tuple[int, int]]],
+) -> tuple[list[tuple[StudyBlock, str]], bool]:
+    created_pairs: list[tuple[StudyBlock, str]] = []
+    scheduled_per_day: dict[str, list[tuple[int, int]]] = {}
+    overload_flag = ai_schedule.overload_warning
+
+    for item in ai_schedule.study_blocks:
+        if item.task_id not in task_map:
+            overload_flag = True
+            continue
+        parsed = _parse_block_datetimes(item.date, item.start_time, item.end_time, user_tz)
+        if parsed is None:
+            overload_flag = True
+            continue
+        start_dt, end_dt = parsed
+
+        d_str = item.date[:10]
+        st_min = start_dt.hour * 60 + start_dt.minute
+        et_min = end_dt.hour * 60 + end_dt.minute
+
+        allowed = valid_window_intervals.get(d_str, [])
+        if not any(w_s <= st_min and et_min <= w_e for w_s, w_e in allowed):
+            overload_flag = True
+            continue
+
+        day_sessions = scheduled_per_day.get(d_str, [])
+        if any(not (et_min <= s or st_min >= e) for s, e in day_sessions):
+            overload_flag = True
+            continue
+
+        db_block = StudyBlock(
+            user_id=user_id,
+            task_id=item.task_id,
+            start_at=start_dt,
+            end_at=end_dt,
+            status=BlockStatus.PLANNED,
+        )
+        day_sessions.append((st_min, et_min))
+        scheduled_per_day[d_str] = day_sessions
+        created_pairs.append((db_block, item.focus_goal))
+
+    return created_pairs, overload_flag
+
+
+@router.get("", response_model=ScheduleResponse, summary="Get current study schedule (FR-06)")
+async def get_schedule(
+    user: CurrentUser,
+    db: DbSession,
+    page: Paging,
+    semester: str | None = None,
+) -> ScheduleResponse:
+    stmt = (
+        select(StudyBlock)
+        .options(joinedload(StudyBlock.task).joinedload(Task.course))
+        .where(StudyBlock.user_id == user.id)
+    )
+    if semester:
+        stmt = stmt.join(StudyBlock.task).join(Task.course).where(Course.semester == semester)
+    stmt = stmt.order_by(StudyBlock.start_at, StudyBlock.id).limit(page.limit).offset(page.offset)
+    blocks = list((await db.scalars(stmt)).unique())
+    return ScheduleResponse(
+        study_blocks=[_to_study_block_out(b, b.task) for b in blocks if b.task],
+        overload_warning=False,
+    )
+
+
+@router.patch(
+    "/blocks/{block_id}/status",
+    response_model=StudyBlockOut,
+    summary="Update a study block status to pending/planned, completed, or missed (FR-08, FR-10)",
+)
+async def update_block_status(
+    block_id: int,
+    body: BlockStatusUpdate,
+    user: CurrentUser,
+    db: DbSession,
+) -> StudyBlockOut:
+    stmt = (
+        select(StudyBlock)
+        .options(joinedload(StudyBlock.task).joinedload(Task.course))
+        .where(StudyBlock.id == block_id, StudyBlock.user_id == user.id)
+    )
+    block = (await db.scalars(stmt)).unique().first()
+    if block is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "StudyBlock not found")
+
+    block.status = (
+        BlockStatus.PLANNED if body.status in ("pending", "planned") else BlockStatus(body.status)
+    )
+    await db.commit()
+    return _to_study_block_out(block, block.task)
+
+
+@router.post(
+    "/generate",
+    response_model=ScheduleResponse,
+    summary="Generate AI-powered dynamic study schedule (FR-06)",
+)
+async def generate_schedule(
+    user: CurrentUser,
+    db: DbSession,
+    semester: str | None = None,
+    tz: Annotated[str, Query(max_length=64, description="IANA timezone, e.g. Asia/Baku")] = "UTC",
+) -> ScheduleResponse:
+    user_tz = _resolve_tz(tz)
+    task_stmt = (
+        select(Task)
+        .join(Task.course)
+        .options(joinedload(Task.course))
+        .where(
+            Task.user_id == user.id,
+            Task.status != TaskStatus.COMPLETED,
+            Course.is_archived.is_(False),
+        )
+    )
+    if semester:
+        task_stmt = task_stmt.where(Course.semester == semester)
+    task_stmt = task_stmt.order_by(Task.due_date).limit(100)
+    tasks = list((await db.scalars(task_stmt)).unique())
+    if not tasks:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "No pending tasks found to schedule. Add a task first.",
+        )
+
+    now_local = datetime.now(user_tz)
+    today = now_local.date()
+    concrete_windows, valid_window_intervals = await _load_concrete_windows(
+        db, user.id, today, now_local.time()
+    )
+    task_map: dict[int, Task] = {t.id: t for t in tasks}
+
     payload = json.dumps(
         {
             "today_date": today.isoformat(),
@@ -241,50 +326,11 @@ async def generate_schedule(
             f"AI scheduler unavailable: {exc}",
         ) from exc
 
-    # Enforce strict validation: ensure blocks are inside available windows and don't overlap
-    created_pairs: list[tuple[StudyBlock, str]] = []
-    scheduled_per_day: dict[str, list[tuple[int, int]]] = {}
-    overload_flag = ai_schedule.overload_warning
-
-    for item in ai_schedule.study_blocks:
-        if item.task_id not in task_map:
-            overload_flag = True
-            continue
-        parsed = _parse_block_datetimes(item.date, item.start_time, item.end_time, user_tz)
-        if parsed is None:
-            overload_flag = True
-            continue
-        start_dt, end_dt = parsed
-
-        d_str = item.date[:10]
-        st_min = start_dt.hour * 60 + start_dt.minute
-        et_min = end_dt.hour * 60 + end_dt.minute
-
-        # 1. Hard check: must fit strictly inside an allowed open window on that date
-        allowed = valid_window_intervals.get(d_str, [])
-        fits_window = any(w_s <= st_min and et_min <= w_e for w_s, w_e in allowed)
-        if not fits_window:
-            overload_flag = True
-            continue
-
-        # 2. Hard check: cannot overlap with another scheduled session
-        day_sessions = scheduled_per_day.get(d_str, [])
-        has_overlap = any(not (et_min <= s or st_min >= e) for s, e in day_sessions)
-        if has_overlap:
-            overload_flag = True
-            continue
-
-        db_block = StudyBlock(
-            user_id=user.id,
-            task_id=item.task_id,
-            start_at=start_dt,
-            end_at=end_dt,
-            status=BlockStatus.PLANNED,
-        )
+    created_pairs, overload_flag = _validate_ai_blocks(
+        ai_schedule, user.id, user_tz, task_map, valid_window_intervals
+    )
+    for db_block, _ in created_pairs:
         db.add(db_block)
-        day_sessions.append((st_min, et_min))
-        scheduled_per_day[d_str] = day_sessions
-        created_pairs.append((db_block, item.focus_goal))
 
     today_start = datetime.combine(today, time.min, tzinfo=user_tz)
     await db.execute(
@@ -302,6 +348,145 @@ async def generate_schedule(
         study_blocks=[
             _to_study_block_out(db_block, task_map[db_block.task_id], focus_goal)
             for db_block, focus_goal in created_pairs
+        ],
+        overload_warning=overload_flag,
+    )
+
+
+@router.post(
+    "/rebalance",
+    response_model=ScheduleResponse,
+    summary="Dynamically rebalance study schedule around missed sessions and remaining effort (FR-08)",
+)
+async def rebalance_schedule(
+    user: CurrentUser,
+    db: DbSession,
+    semester: str | None = None,
+    tz: Annotated[str, Query(max_length=64, description="IANA timezone, e.g. Asia/Baku")] = "UTC",
+) -> ScheduleResponse:
+    user_tz = _resolve_tz(tz)
+    now_local = datetime.now(user_tz)
+    today = now_local.date()
+    today_start = datetime.combine(today, time.min, tzinfo=user_tz)
+
+    # 1. Auto-update past uncompleted blocks to 'missed' in a single SQL UPDATE
+    await db.execute(
+        update(StudyBlock)
+        .where(
+            StudyBlock.user_id == user.id,
+            StudyBlock.start_at < today_start,
+            StudyBlock.status == BlockStatus.PLANNED,
+        )
+        .values(status=BlockStatus.MISSED, updated_at=datetime.now(UTC))
+        .execution_options(synchronize_session=False)
+    )
+
+    # 2. Fetch incomplete tasks with Course and study_blocks in ONE query using selectinload
+    task_stmt = (
+        select(Task)
+        .join(Task.course)
+        .options(selectinload(Task.course), selectinload(Task.study_blocks))
+        .where(
+            Task.user_id == user.id,
+            Task.status != TaskStatus.COMPLETED,
+            Course.is_archived.is_(False),
+        )
+    )
+    if semester:
+        task_stmt = task_stmt.where(Course.semester == semester)
+    task_stmt = task_stmt.order_by(Task.due_date).limit(100)
+    tasks = list((await db.scalars(task_stmt)).unique())
+    if not tasks:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "No incomplete tasks found to rebalance.",
+        )
+
+    # 3. Fetch user's available study windows
+    concrete_windows, valid_window_intervals = await _load_concrete_windows(
+        db, user.id, today, now_local.time()
+    )
+
+    # 4. Compute remaining effort for each incomplete task
+    task_map: dict[int, Task] = {t.id: t for t in tasks}
+    tasks_to_reschedule: list[dict] = []
+    for t in tasks:
+        completed_hours = sum(
+            max(0.0, (b.end_at - b.start_at).total_seconds() / 3600.0)
+            for b in (t.study_blocks or [])
+            if b.status == BlockStatus.COMPLETED or getattr(b, "status", None) == "completed"
+        )
+        remaining_effort_hours = max(0.5, round(t.estimated_hours - completed_hours, 2))
+        tasks_to_reschedule.append(
+            {
+                "task_id": t.id,
+                "title": t.title,
+                "due_date": t.due_date.strftime("%Y-%m-%d"),
+                "remaining_effort_hours": remaining_effort_hours,
+                "syllabus_weight": t.weight_percent,
+            }
+        )
+
+    # 5. Call generate_structured() to redistribute remaining effort
+    payload = json.dumps(
+        {
+            "CURRENT_DATE": today.isoformat(),
+            "today_date": today.isoformat(),
+            "tasks_to_reschedule": tasks_to_reschedule,
+            "concrete_available_windows": concrete_windows,
+        }
+    )
+
+    try:
+        ai_schedule = await generate_structured(SYSTEM_PROMPT, payload, AIGeneratedSchedule)
+    except Exception as exc:
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            f"AI rebalancer unavailable: {exc}",
+        ) from exc
+
+    created_pairs, overload_flag = _validate_ai_blocks(
+        ai_schedule, user.id, user_tz, task_map, valid_window_intervals
+    )
+    new_blocks = [b for b, _ in created_pairs]
+
+    # 6. Delete uncompleted blocks (status != 'completed' and (start_at >= today_start or status == 'missed'))
+    #    while strictly preserving 'completed' blocks, then bulk-insert new blocks
+    await db.execute(
+        delete(StudyBlock).where(
+            StudyBlock.user_id == user.id,
+            StudyBlock.status != BlockStatus.COMPLETED,
+            or_(
+                StudyBlock.start_at >= today_start,
+                StudyBlock.status == BlockStatus.MISSED,
+            ),
+        )
+    )
+    if new_blocks:
+        db.add_all(new_blocks)
+    await db.flush()
+    await db.commit()
+
+    # 7. Query and return all study blocks (completed history + new planned blocks) using O(1) task_map
+    all_blocks_stmt = (
+        select(StudyBlock)
+        .where(StudyBlock.user_id == user.id)
+        .order_by(StudyBlock.start_at, StudyBlock.id)
+        .limit(500)
+    )
+    all_blocks = list((await db.scalars(all_blocks_stmt)).unique())
+    focus_by_id = {b.id: goal for b, goal in created_pairs if b.id is not None}
+    focus_by_obj = {id(b): goal for b, goal in created_pairs}
+
+    return ScheduleResponse(
+        study_blocks=[
+            _to_study_block_out(
+                b,
+                task_map[b.task_id],
+                focus_by_id.get(b.id) or focus_by_obj.get(id(b), ""),
+            )
+            for b in all_blocks
+            if b.task_id in task_map
         ],
         overload_warning=overload_flag,
     )

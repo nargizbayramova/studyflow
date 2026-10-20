@@ -18,6 +18,7 @@ interface WeekViewProps {
   blocksByDate: Map<string, StudyBlock[]>;
   onSelectBlock: (block: StudyBlock) => void;
   onSelectSlot: (date: Date) => void;
+  onStatusChange?: (block: StudyBlock, status: "completed" | "missed") => void;
 }
 
 export const WeekView: React.FC<WeekViewProps> = ({
@@ -25,6 +26,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
   blocksByDate,
   onSelectBlock,
   onSelectSlot,
+  onStatusChange,
 }) => {
   const currentLineTop = getCurrentTimeOffset(HOUR_HEIGHT);
 
@@ -114,6 +116,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
                   hourHeight={HOUR_HEIGHT}
                   compact
                   onSelect={onSelectBlock}
+                  onStatusChange={onStatusChange}
                 />
               ))}
             </div>

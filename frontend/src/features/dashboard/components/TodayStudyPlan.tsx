@@ -24,14 +24,20 @@ export const TodayStudyPlan: React.FC<TodayStudyPlanProps> = ({
     lastGenerated,
     clearLastGenerated,
     isGenerating,
+    isRebalancing,
+    rebalancePrompt,
     error,
     generateSchedule,
-    toggleBlockStatus,
+    rebalanceSchedule,
+    updateBlockStatus,
   } = useSchedule();
 
   const activeBlocks = scheduleBlocks.length > 0 ? scheduleBlocks : studyBlocks;
   const todayBlocks = activeBlocks.filter((b) => isToday(new Date(b.start_at)));
   const totalTodayHours = sumBlocksHours(todayBlocks);
+  const hasMissedBlocks = activeBlocks.some((b) => b.status === "missed");
+  const showRebalanceBanner = Boolean(rebalancePrompt || hasMissedBlocks);
+  const busy = isGenerating || isRebalancing;
   const todayStr = new Intl.DateTimeFormat("en-US", {
     weekday: "long",
     month: "long",
@@ -40,16 +46,25 @@ export const TodayStudyPlan: React.FC<TodayStudyPlanProps> = ({
 
   return (
     <div className="w-full lg:w-[420px] p-6 bg-white border border-[#E5E6EB] rounded-xl flex flex-col gap-4 flex-shrink-0 shadow-sm">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-lg font-semibold text-[#252735]">Today’s study plan</h3>
-        <button
-          onClick={() => void generateSchedule()}
-          disabled={isGenerating}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#5553B7] hover:bg-[#48469F] disabled:opacity-60 text-white text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>{isGenerating ? "Generating..." : "Generate AI Schedule"}</span>
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => void generateSchedule()}
+            disabled={busy}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#5553B7] hover:bg-[#48469F] disabled:opacity-60 text-white text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>{isGenerating ? "Generating..." : "Generate AI"}</span>
+          </button>
+          <button
+            onClick={() => void rebalanceSchedule()}
+            disabled={busy}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#E5E6EB] bg-white hover:bg-slate-50 disabled:opacity-60 text-[#252735] text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
+          >
+            <span>{isRebalancing ? "Rebalancing..." : "🔄 Rebalance Schedule"}</span>
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center justify-between text-[13px]">
@@ -58,6 +73,22 @@ export const TodayStudyPlan: React.FC<TodayStudyPlanProps> = ({
           {totalTodayHours} h scheduled
         </span>
       </div>
+
+      {showRebalanceBanner && (
+        <div className="flex items-center justify-between gap-2 p-3 rounded-lg bg-[#EFEEF9] border border-[#CAC7EA] text-[#252735] text-xs">
+          <span className="leading-snug">
+            {rebalancePrompt || "Missed study sessions detected. Rebalance your remaining hours."}
+          </span>
+          <button
+            type="button"
+            onClick={() => void rebalanceSchedule()}
+            disabled={busy}
+            className="px-2.5 py-1.5 rounded-md bg-[#5553B7] hover:bg-[#48469F] disabled:opacity-60 text-white text-[11px] font-semibold flex-shrink-0 cursor-pointer disabled:cursor-not-allowed"
+          >
+            {isRebalancing ? "..." : "🔄 Rebalance Now"}
+          </button>
+        </div>
+      )}
 
       {overloadWarning && (
         <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs">
@@ -86,28 +117,44 @@ export const TodayStudyPlan: React.FC<TodayStudyPlanProps> = ({
             const code = block.course_code || course?.code || "GENERAL";
             const title = block.task_title || task?.title || "Focus Study Session";
             const isCompleted = block.status === "completed";
+            const isMissed = block.status === "missed";
 
             return (
               <div
                 key={block.id}
                 className={`p-3.5 rounded-lg flex flex-col gap-2 transition-opacity ${
-                  isCompleted ? "opacity-65" : ""
+                  isCompleted || isMissed ? "opacity-65" : ""
                 }`}
                 style={{ backgroundColor: `${color}15`, borderLeft: `3px solid ${color}` }}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-semibold text-[#252735]">
                     {formatTimeRange(block.start_at, block.end_at)}
                   </span>
-                  <label className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#747683] cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isCompleted}
-                      onChange={() => void toggleBlockStatus(block)}
-                      className="rounded border-slate-300 text-[#5553B7] focus:ring-[#5553B7] cursor-pointer"
-                    />
-                    <span>{isCompleted ? "Done" : "Complete"}</span>
-                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => void updateBlockStatus(block, "completed")}
+                      className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors cursor-pointer ${
+                        isCompleted
+                          ? "bg-emerald-600 text-white"
+                          : "bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200"
+                      }`}
+                    >
+                      ✓ Done
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void updateBlockStatus(block, "missed")}
+                      className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors cursor-pointer ${
+                        isMissed
+                          ? "bg-rose-600 text-white"
+                          : "bg-white hover:bg-rose-50 text-rose-700 border border-rose-200"
+                      }`}
+                    >
+                      ✕ Missed
+                    </button>
+                  </div>
                 </div>
                 <h4 className={`text-sm font-semibold text-[#252735] line-clamp-1 ${isCompleted ? "line-through" : ""}`}>
                   {title}

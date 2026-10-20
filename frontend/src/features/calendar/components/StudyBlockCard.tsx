@@ -9,6 +9,7 @@ interface StudyBlockCardProps {
   hourHeight: number;
   compact?: boolean;
   onSelect: (block: StudyBlock) => void;
+  onStatusChange?: (block: StudyBlock, status: "completed" | "missed") => void;
 }
 
 export const StudyBlockCard: React.FC<StudyBlockCardProps> = ({
@@ -16,6 +17,7 @@ export const StudyBlockCard: React.FC<StudyBlockCardProps> = ({
   hourHeight,
   compact = false,
   onSelect,
+  onStatusChange,
 }) => {
   const bStart = new Date(block.start_at);
   const bEnd = new Date(block.end_at);
@@ -23,14 +25,44 @@ export const StudyBlockCard: React.FC<StudyBlockCardProps> = ({
   const endHour = bEnd.getHours() + bEnd.getMinutes() / 60;
 
   const top = Math.max(0, (startHour - 8) * hourHeight);
-  const minHeight = compact ? 28 : 34;
+  const minHeight = compact ? 36 : 42;
   const height = Math.max(minHeight, (endHour - startHour) * hourHeight - 3);
 
   const color = block.course_color || "#5553B7";
   const code = block.course_code || "STUDY";
   const title = block.task_title || "Study Session";
   const isCompleted = block.status === "completed";
+  const isMissed = block.status === "missed";
   const timeRange = formatTimeRange(block.start_at, block.end_at);
+
+  const actionButtons = onStatusChange && (
+    <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={() => onStatusChange(block, "completed")}
+        className={`px-1.5 py-0.5 rounded text-[10px] font-semibold transition-colors cursor-pointer ${
+          isCompleted
+            ? "bg-emerald-600 text-white"
+            : "bg-white/90 hover:bg-emerald-50 text-emerald-700 border border-emerald-200"
+        }`}
+        title="Mark Done"
+      >
+        ✓ Done
+      </button>
+      <button
+        type="button"
+        onClick={() => onStatusChange(block, "missed")}
+        className={`px-1.5 py-0.5 rounded text-[10px] font-semibold transition-colors cursor-pointer ${
+          isMissed
+            ? "bg-rose-600 text-white"
+            : "bg-white/90 hover:bg-rose-50 text-rose-700 border border-rose-200"
+        }`}
+        title="Mark Missed"
+      >
+        ✕ Missed
+      </button>
+    </div>
+  );
 
   return (
     <div
@@ -52,18 +84,19 @@ export const StudyBlockCard: React.FC<StudyBlockCardProps> = ({
           ? "left-1 right-1 rounded-md p-1.5 flex-col justify-between overflow-hidden"
           : "left-2 right-2 rounded-lg p-2.5 items-center justify-between"
       } flex shadow-xs hover:shadow-md transition-all cursor-pointer z-10 ${
-        isCompleted ? "opacity-75" : ""
+        isCompleted || isMissed ? "opacity-75" : ""
       }`}
     >
       {compact ? (
         <>
           <div className="flex items-center justify-between gap-1 leading-none">
             <CourseTag code={code} color={color} />
-            <span className="text-[10px] font-medium text-[#747683]">{timeRange}</span>
+            <span className="text-[10px] font-medium text-[#747683] truncate">{timeRange}</span>
           </div>
           <div className="flex items-center justify-between gap-1 mt-0.5">
             <span className="text-[11px] font-bold text-[#252735] truncate">{title}</span>
-            {isCompleted && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />}
+            {actionButtons ||
+              (isCompleted && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />)}
           </div>
         </>
       ) : (
@@ -77,7 +110,8 @@ export const StudyBlockCard: React.FC<StudyBlockCardProps> = ({
               </span>
             </div>
           </div>
-          {isCompleted && <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />}
+          {actionButtons ||
+            (isCompleted && <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />)}
         </>
       )}
     </div>

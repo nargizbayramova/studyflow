@@ -1,5 +1,11 @@
 from datetime import datetime
+from typing import Literal
+
 from pydantic import BaseModel
+
+
+class BlockStatusUpdate(BaseModel):
+    status: Literal["pending", "planned", "completed", "missed"]
 
 
 class AIStudyBlockItem(BaseModel):
