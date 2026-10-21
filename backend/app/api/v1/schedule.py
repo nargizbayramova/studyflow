@@ -1,13 +1,19 @@
-from datetime import UTC, datetime, timedelta
-from typing import Annotated
+from datetime import UTC, date, datetime, timedelta
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.api.deps import CurrentUser, DbSession, Paging
-from app.models import BlockStatus, Course, StudyBlock, Task, TaskStatus
-from app.schemas.schedule import BlockStatusUpdate, ScheduleResponse, StudyBlockOut
+from app.models import AvailabilitySlot, BlockStatus, Course, SlotKind, StudyBlock, Task, TaskStatus, TaskType
+from app.schemas.schedule import (
+    BlockStatusUpdate,
+    ScheduleResponse,
+    StudyBlockOut,
+    WeeklyWorkloadItem,
+    WorkloadAnalyticsResponse,
+)
 from app.services import monitoring
 from app.services.ai_client import generate_structured
 from app.services.scheduler import (
@@ -180,3 +186,165 @@ async def export_schedule_ics(
         media_type="text/calendar",
         headers={"Content-Disposition": 'attachment; filename="studyflow_schedule.ics"'},
     )
+
+
+def _slot_hours(slot: AvailabilitySlot) -> float:
+    st = slot.start_time.hour * 60 + slot.start_time.minute
+    et = slot.end_time.hour * 60 + slot.end_time.minute
+    return max(0.0, (et - st) / 60.0)
+
+
+def _build_workload_analytics(
+    tasks: list[Task],
+    blocks: list[StudyBlock],
+    slots: list[AvailabilitySlot],
+    today: date | None = None,
+) -> WorkloadAnalyticsResponse:
+    base_date = today or datetime.now(UTC).date()
+    monday = base_date - timedelta(days=base_date.weekday())
+
+    recurring_avail_by_dow: dict[int, float] = {}
+    date_avail: dict[date, float] = {}
+    for s in slots:
+        if s.kind != SlotKind.AVAILABLE:
+            continue
+        hrs = _slot_hours(s)
+        spec_date = getattr(s, "specific_date", None)
+        if isinstance(spec_date, date):
+            date_avail[spec_date] = date_avail.get(spec_date, 0.0) + hrs
+        else:
+            recurring_avail_by_dow[s.day_of_week] = (
+                recurring_avail_by_dow.get(s.day_of_week, 0.0) + hrs
+            )
+
+    base_weekly_cap = round(sum(recurring_avail_by_dow.values()), 1)
+
+    completed_by_task: dict[int, float] = {}
+    total_planned = 0.0
+    total_actual = 0.0
+    for b in blocks:
+        dur = max(0.0, (b.end_at - b.start_at).total_seconds() / 3600.0)
+        if b.status != BlockStatus.MISSED:
+            total_planned += dur
+        if b.status == BlockStatus.COMPLETED:
+            total_actual += dur
+            completed_by_task[b.task_id] = completed_by_task.get(b.task_id, 0.0) + dur
+
+    remaining_required = sum(
+        max(0.0, t.estimated_hours - completed_by_task.get(t.id, 0.0))
+        for t in tasks
+        if t.status != TaskStatus.COMPLETED
+    )
+
+    weeks: list[WeeklyWorkloadItem] = []
+    for w_idx in range(4):
+        w_start = monday + timedelta(days=w_idx * 7)
+        w_end = w_start + timedelta(days=6)
+        label = (
+            "This week"
+            if w_idx == 0
+            else "Next week"
+            if w_idx == 1
+            else f"{w_start.strftime('%b %-d')}–{w_end.strftime('%b %-d')}"
+        )
+
+        w_planned = 0.0
+        w_actual = 0.0
+        for b in blocks:
+            b_date = b.start_at.date()
+            if w_start <= b_date <= w_end:
+                dur = max(0.0, (b.end_at - b.start_at).total_seconds() / 3600.0)
+                if b.status != BlockStatus.MISSED:
+                    w_planned += dur
+                if b.status == BlockStatus.COMPLETED:
+                    w_actual += dur
+
+        w_tasks = [
+            t
+            for t in tasks
+            if t.status != TaskStatus.COMPLETED and w_start <= t.due_date.date() <= w_end
+        ]
+        w_rem_task_hrs = sum(
+            max(0.0, t.estimated_hours - completed_by_task.get(t.id, 0.0)) for t in w_tasks
+        )
+        has_high_stakes = any(
+            t.type == TaskType.EXAM or t.weight_percent >= 25.0 for t in w_tasks
+        )
+
+        w_cap = base_weekly_cap
+        for d_off in range(7):
+            d_cur = w_start + timedelta(days=d_off)
+            w_cap += date_avail.get(d_cur, 0.0)
+
+        demand = max(w_planned, w_rem_task_hrs)
+        reason: str | None = None
+        stress: Literal["low", "moderate", "high"] = "low"
+
+        if w_cap > 0 and demand > w_cap:
+            stress = "high"
+            reason = f"{demand:.1f}h workload exceeds {w_cap:.1f}h available capacity"
+        elif demand >= 15.0:
+            stress = "high"
+            reason = f"Heavy workload ({demand:.1f}h) scheduled in one week"
+        elif len(w_tasks) >= 3:
+            stress = "high"
+            reason = f"{len(w_tasks)} deadlines clustered this week"
+        elif has_high_stakes and demand >= 8.0:
+            stress = "high"
+            reason = "High-stakes exam or major milestone due"
+        elif demand >= 8.0 or len(w_tasks) >= 2 or (w_cap > 0 and demand >= 0.6 * w_cap):
+            stress = "moderate"
+
+        weeks.append(
+            WeeklyWorkloadItem(
+                week_start=w_start.isoformat(),
+                week_end=w_end.isoformat(),
+                label=label,
+                planned_hours=round(w_planned, 1),
+                actual_hours=round(w_actual, 1),
+                remaining_task_hours=round(w_rem_task_hrs, 1),
+                capacity_hours=round(w_cap, 1),
+                tasks_due_count=len(w_tasks),
+                stress_level=stress,
+                is_high_stress=(stress == "high"),
+                warning_reason=reason,
+            )
+        )
+
+    completion_pct = round((total_actual / total_planned) * 100) if total_planned > 0 else 0
+
+    return WorkloadAnalyticsResponse(
+        total_planned_hours=round(total_planned, 1),
+        total_actual_hours=round(total_actual, 1),
+        completion_rate_pct=min(100, completion_pct),
+        remaining_required_hours=round(remaining_required, 1),
+        weekly_capacity_hours=base_weekly_cap,
+        high_stress_weeks_count=sum(1 for w in weeks if w.is_high_stress),
+        weeks=weeks,
+    )
+
+
+@router.get(
+    "/analytics",
+    response_model=WorkloadAnalyticsResponse,
+    summary="Visual workload analytics: planned vs. actual hours & high-stress week warnings (FR-14)",
+)
+async def get_workload_analytics(
+    user: CurrentUser,
+    db: DbSession,
+    semester: str | None = None,
+) -> WorkloadAnalyticsResponse:
+    tasks_stmt = select(Task).where(Task.user_id == user.id)
+    blocks_stmt = select(StudyBlock).where(StudyBlock.user_id == user.id)
+    if semester:
+        tasks_stmt = tasks_stmt.join(Task.course).where(Course.semester == semester)
+        blocks_stmt = (
+            blocks_stmt.join(StudyBlock.task).join(Task.course).where(Course.semester == semester)
+        )
+    slots_stmt = select(AvailabilitySlot).where(AvailabilitySlot.user_id == user.id)
+
+    tasks = list(await db.scalars(tasks_stmt.limit(500)))
+    blocks = list(await db.scalars(blocks_stmt.limit(500)))
+    slots = list(await db.scalars(slots_stmt.limit(200)))
+
+    return _build_workload_analytics(tasks, blocks, slots)

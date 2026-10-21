@@ -3,6 +3,7 @@ import { Task, Course, TaskType, TaskStatus, TaskPriority } from "@/types";
 import { Modal } from "@/components/common/Modal";
 import { Input } from "@/components/common/Input";
 import { Button } from "@/components/common/Button";
+import { Select } from "@/components/common/Select";
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -143,33 +144,32 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
             <label className="text-[13px] font-semibold text-[#252735]">Course</label>
-            <select
-              value={courseId}
-              onChange={(e) => setCourseId(Number(e.target.value))}
-              required
-              className="h-[46px] px-3 rounded-lg border border-[#E5E6EB] text-sm text-[#252735] bg-white focus:outline-none focus:border-[#5553B7]"
-            >
-              <option value="">Select course</option>
-              {courses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.code} - {c.title}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={courseId ? String(courseId) : ""}
+              onChange={(val) => setCourseId(val ? Number(val) : 0)}
+              options={[
+                { value: "", label: "Select course" },
+                ...courses.map((c) => ({ value: String(c.id), label: `${c.code} - ${c.title}` })),
+              ]}
+              className="w-full"
+              buttonClassName="h-[46px] text-sm font-normal"
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <label className="text-[13px] font-semibold text-[#252735]">Task type</label>
-            <select
+            <Select
               value={type}
-              onChange={(e) => setType(e.target.value as TaskType)}
-              className="h-[46px] px-3 rounded-lg border border-[#E5E6EB] text-sm text-[#252735] bg-white focus:outline-none focus:border-[#5553B7]"
-            >
-              <option value="assignment">Assignment</option>
-              <option value="exam">Exam</option>
-              <option value="quiz">Quiz</option>
-              <option value="project_milestone">Project milestone</option>
-            </select>
+              onChange={(val) => setType(val as TaskType)}
+              options={[
+                { value: "assignment", label: "Assignment" },
+                { value: "exam", label: "Exam" },
+                { value: "quiz", label: "Quiz" },
+                { value: "project_milestone", label: "Project milestone" },
+              ]}
+              className="w-full"
+              buttonClassName="h-[46px] text-sm font-normal"
+            />
           </div>
         </div>
 
@@ -204,28 +204,32 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
             <label className="text-[13px] font-semibold text-[#252735]">Priority</label>
-            <select
+            <Select
               value={priority}
-              onChange={(e) => setPriority(e.target.value as TaskPriority)}
-              className="h-10 px-3 rounded-lg border border-[#E5E6EB] text-xs font-medium text-[#252735] bg-white focus:outline-none focus:border-[#5553B7]"
-            >
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
+              onChange={(val) => setPriority(val as TaskPriority)}
+              options={[
+                { value: "high", label: "High" },
+                { value: "medium", label: "Medium" },
+                { value: "low", label: "Low" },
+              ]}
+              className="w-full"
+              buttonClassName="h-10 text-xs font-medium"
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <label className="text-[13px] font-semibold text-[#252735]">Status</label>
-            <select
+            <Select
               value={status}
-              onChange={(e) => setStatus(e.target.value as TaskStatus)}
-              className="h-10 px-3 rounded-lg border border-[#E5E6EB] text-xs font-medium text-[#252735] bg-white focus:outline-none focus:border-[#5553B7]"
-            >
-              <option value="pending">Pending</option>
-              <option value="in_progress">In progress</option>
-              <option value="completed">Completed</option>
-            </select>
+              onChange={(val) => setStatus(val as TaskStatus)}
+              options={[
+                { value: "pending", label: "Pending" },
+                { value: "in_progress", label: "In progress" },
+                { value: "completed", label: "Completed" },
+              ]}
+              className="w-full"
+              buttonClassName="h-10 text-xs font-medium"
+            />
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 import React from "react";
 import { Search, ArrowDownWideNarrow } from "lucide-react";
 import { Course, TaskPriority, TaskStatus, TaskType } from "@/types";
+import { Select } from "@/components/common/Select";
 
 interface TaskFiltersBarProps {
   search: string;
@@ -18,6 +19,28 @@ interface TaskFiltersBarProps {
   onToggleSort: () => void;
 }
 
+const TYPE_OPTIONS = [
+  { value: "", label: "All types" },
+  { value: "assignment", label: "Assignment" },
+  { value: "exam", label: "Exam" },
+  { value: "quiz", label: "Quiz" },
+  { value: "project_milestone", label: "Project milestone" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "", label: "All statuses" },
+  { value: "pending", label: "Pending" },
+  { value: "in_progress", label: "In progress" },
+  { value: "completed", label: "Completed" },
+];
+
+const PRIORITY_OPTIONS = [
+  { value: "", label: "All priorities" },
+  { value: "high", label: "High" },
+  { value: "medium", label: "Medium" },
+  { value: "low", label: "Low" },
+];
+
 export const TaskFiltersBar: React.FC<TaskFiltersBarProps> = ({
   search,
   onSearchChange,
@@ -33,6 +56,11 @@ export const TaskFiltersBar: React.FC<TaskFiltersBarProps> = ({
   sortByEarliest,
   onToggleSort,
 }) => {
+  const courseOptions = [
+    { value: "", label: "All courses" },
+    ...courses.map((c) => ({ value: String(c.id), label: c.code })),
+  ];
+
   return (
     <div className="flex flex-col gap-3">
       {/* Search and Sort row */}
@@ -59,52 +87,33 @@ export const TaskFiltersBar: React.FC<TaskFiltersBarProps> = ({
 
       {/* Select Filters row */}
       <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2.5">
-        <select
-          value={selectedCourseId || ""}
-          onChange={(e) => onCourseChange(e.target.value ? Number(e.target.value) : undefined)}
-          className="h-9 px-3 rounded-lg border border-[#E5E6EB] text-xs font-medium text-[#252735] bg-white hover:bg-slate-50 focus:outline-none focus:border-[#5553B7] cursor-pointer w-full sm:w-auto"
-        >
-          <option value="">All courses</option>
-          {courses.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.code}
-            </option>
-          ))}
-        </select>
+        <Select
+          value={selectedCourseId ? String(selectedCourseId) : ""}
+          onChange={(val) => onCourseChange(val ? Number(val) : undefined)}
+          options={courseOptions}
+          className="w-full sm:w-auto"
+        />
 
-        <select
+        <Select
           value={selectedType || ""}
-          onChange={(e) => onTypeChange((e.target.value as TaskType) || undefined)}
-          className="h-9 px-3 rounded-lg border border-[#E5E6EB] text-xs font-medium text-[#252735] bg-white hover:bg-slate-50 focus:outline-none focus:border-[#5553B7] cursor-pointer w-full sm:w-auto"
-        >
-          <option value="">All types</option>
-          <option value="assignment">Assignment</option>
-          <option value="exam">Exam</option>
-          <option value="quiz">Quiz</option>
-          <option value="project_milestone">Project milestone</option>
-        </select>
+          onChange={(val) => onTypeChange((val as TaskType) || undefined)}
+          options={TYPE_OPTIONS}
+          className="w-full sm:w-auto"
+        />
 
-        <select
+        <Select
           value={selectedStatus || ""}
-          onChange={(e) => onStatusChange((e.target.value as TaskStatus) || undefined)}
-          className="h-9 px-3 rounded-lg border border-[#E5E6EB] text-xs font-medium text-[#252735] bg-white hover:bg-slate-50 focus:outline-none focus:border-[#5553B7] cursor-pointer w-full sm:w-auto"
-        >
-          <option value="">All statuses</option>
-          <option value="pending">Pending</option>
-          <option value="in_progress">In progress</option>
-          <option value="completed">Completed</option>
-        </select>
+          onChange={(val) => onStatusChange((val as TaskStatus) || undefined)}
+          options={STATUS_OPTIONS}
+          className="w-full sm:w-auto"
+        />
 
-        <select
+        <Select
           value={selectedPriority || ""}
-          onChange={(e) => onPriorityChange((e.target.value as TaskPriority) || undefined)}
-          className="h-9 px-3 rounded-lg border border-[#E5E6EB] text-xs font-medium text-[#252735] bg-white hover:bg-slate-50 focus:outline-none focus:border-[#5553B7] cursor-pointer w-full sm:w-auto"
-        >
-          <option value="">All priorities</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
+          onChange={(val) => onPriorityChange((val as TaskPriority) || undefined)}
+          options={PRIORITY_OPTIONS}
+          className="w-full sm:w-auto"
+        />
       </div>
     </div>
   );

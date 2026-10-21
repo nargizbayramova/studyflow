@@ -773,6 +773,71 @@ async def test_availability_slot_overlap_validation():
     )
 
 
+def test_workload_analytics_fr14():
+    from datetime import UTC, date, datetime, time
+    from app.api.v1.schedule import _build_workload_analytics
+    from app.models import AvailabilitySlot, BlockStatus, SlotKind, StudyBlock, Task, TaskStatus, TaskType
+
+    slots = [
+        AvailabilitySlot(
+            id=1,
+            user_id=1,
+            day_of_week=0,
+            specific_date=None,
+            start_time=time(10, 0),
+            end_time=time(16, 0),
+            kind=SlotKind.AVAILABLE,
+        ),
+    ]
+    tasks = [
+        Task(
+            id=101,
+            user_id=1,
+            course_id=1,
+            title="Midterm Exam",
+            type=TaskType.EXAM,
+            status=TaskStatus.PENDING,
+            due_date=datetime(2026, 10, 28, 12, 0, tzinfo=UTC),
+            estimated_hours=10.0,
+            weight_percent=30.0,
+        ),
+    ]
+    blocks = [
+        StudyBlock(
+            id=201,
+            user_id=1,
+            task_id=101,
+            start_at=datetime(2026, 10, 21, 10, 0, tzinfo=UTC),
+            end_at=datetime(2026, 10, 21, 13, 0, tzinfo=UTC),
+            status=BlockStatus.COMPLETED,
+        ),
+        StudyBlock(
+            id=202,
+            user_id=1,
+            task_id=101,
+            start_at=datetime(2026, 10, 22, 10, 0, tzinfo=UTC),
+            end_at=datetime(2026, 10, 22, 12, 0, tzinfo=UTC),
+            status=BlockStatus.PLANNED,
+        ),
+    ]
+
+    res = _build_workload_analytics(tasks, blocks, slots, today=date(2026, 10, 21))
+    assert res.total_planned_hours == 5.0
+    assert res.total_actual_hours == 3.0
+    assert res.completion_rate_pct == 60
+    assert res.remaining_required_hours == 7.0
+    assert res.weekly_capacity_hours == 6.0
+    assert len(res.weeks) == 4
+    # Week 0 (This week): 5h planned, 3h actual, fits within 6h capacity
+    assert res.weeks[0].planned_hours == 5.0
+    assert res.weeks[0].actual_hours == 3.0
+    assert not res.weeks[0].is_high_stress
+    # Week 1 (Next week, Oct 26-Nov 1): 7h remaining exam effort exceeds 6h weekly capacity -> high stress
+    assert res.weeks[1].is_high_stress is True
+    assert res.high_stress_weeks_count == 1
+
+
+
 
 
 

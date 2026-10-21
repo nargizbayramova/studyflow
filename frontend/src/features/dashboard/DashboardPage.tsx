@@ -6,11 +6,13 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { useCourses } from "@/api/courses";
 import { useTasks } from "@/api/tasks";
 import { useStudyBlocks } from "@/api/studyBlocks";
+import { useAvailabilitySlots } from "@/api/availability";
 import { Spinner } from "@/components/common/Spinner";
 import { PlanningGuide } from "./components/PlanningGuide";
 import { DashboardStats } from "./components/DashboardStats";
 import { TodayStudyPlan } from "./components/TodayStudyPlan";
 import { ComingUpNext } from "./components/ComingUpNext";
+import { WorkloadAnalyticsPanel } from "./components/WorkloadAnalyticsPanel";
 import { CourseProgressPanel } from "./components/CourseProgressPanel";
 
 export const DashboardPage: React.FC = () => {
@@ -19,6 +21,7 @@ export const DashboardPage: React.FC = () => {
   const { data: courses = [], isLoading: loadingCourses } = useCourses({ semester: workspace });
   const { data: tasks = [], isLoading: loadingTasks } = useTasks({ semester: workspace });
   const { data: studyBlocks = [], isLoading: loadingBlocks } = useStudyBlocks({ semester: workspace });
+  const { data: slots = [] } = useAvailabilitySlots();
 
   if (loadingCourses || loadingTasks || loadingBlocks) {
     return (
@@ -65,6 +68,9 @@ export const DashboardPage: React.FC = () => {
         <TodayStudyPlan studyBlocks={studyBlocks} courses={courses} tasks={tasks} />
         <ComingUpNext tasks={tasks} courses={courses} />
       </div>
+
+      {/* Visual workload analytics & high-stress week warnings (FR-14) */}
+      <WorkloadAnalyticsPanel tasks={tasks} studyBlocks={studyBlocks} slots={slots} />
 
       {/* Course progress */}
       <CourseProgressPanel courses={courses} tasks={tasks} />
