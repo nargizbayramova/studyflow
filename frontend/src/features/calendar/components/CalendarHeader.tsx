@@ -1,7 +1,8 @@
 import React from "react";
-import { Plus, ChevronLeft, ChevronRight, ChevronDown, Download } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { Task } from "@/types";
 import { downloadScheduleIcs } from "@/utils/calendar";
+import { Select } from "@/components/common/Select";
 import { CalendarViewMode, formatCalendarTitle } from "../calendarUtils";
 import { CalendarActionMenu } from "./CalendarActionMenu";
 
@@ -170,35 +171,29 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:flex-initial min-w-0">
-            <ChevronDown className="w-3.5 h-3.5 text-[#252735] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <select
-              value={selectedTaskFilter}
-              onChange={(e) => onTaskFilterChange(e.target.value)}
-              className="w-full sm:w-auto h-[36px] pl-7 pr-3 bg-white border border-[#E5E6EB] rounded-[8px] text-xs sm:text-[13px] font-semibold text-[#252735] appearance-none focus:outline-none focus:border-[#5553B7] cursor-pointer shadow-2xs truncate"
-            >
-              <option value="all">All tasks</option>
-              {tasks.map((t) => (
-                <option key={t.id} value={String(t.id)}>
-                  {t.title}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Select
+            value={selectedTaskFilter}
+            onChange={onTaskFilterChange}
+            options={[
+              { value: "all", label: "All tasks" },
+              ...tasks.map((t) => ({ value: String(t.id), label: t.title })),
+            ]}
+            className="flex-1 sm:flex-initial min-w-0"
+            buttonClassName="h-[36px] text-xs sm:text-[13px] font-semibold"
+          />
 
-          <div className="relative flex-1 sm:flex-initial min-w-0">
-            <ChevronDown className="w-3.5 h-3.5 text-[#252735] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <select
-              value={selectedStatusFilter}
-              onChange={(e) => onStatusFilterChange(e.target.value)}
-              className="w-full sm:w-auto h-[36px] pl-7 pr-3 bg-white border border-[#E5E6EB] rounded-[8px] text-xs sm:text-[13px] font-semibold text-[#252735] appearance-none focus:outline-none focus:border-[#5553B7] cursor-pointer shadow-2xs truncate"
-            >
-              <option value="all">All statuses</option>
-              <option value="planned">Planned</option>
-              <option value="completed">Completed</option>
-              <option value="missed">Missed</option>
-            </select>
-          </div>
+          <Select
+            value={selectedStatusFilter}
+            onChange={onStatusFilterChange}
+            options={[
+              { value: "all", label: "All statuses" },
+              { value: "planned", label: "Planned" },
+              { value: "completed", label: "Completed" },
+              { value: "missed", label: "Missed" },
+            ]}
+            className="flex-1 sm:flex-initial min-w-0"
+            buttonClassName="h-[36px] text-xs sm:text-[13px] font-semibold"
+          />
         </div>
       </div>
     </div>

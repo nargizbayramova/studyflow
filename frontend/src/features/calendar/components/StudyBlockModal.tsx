@@ -8,6 +8,7 @@ import { Modal } from "@/components/common/Modal";
 import { Input } from "@/components/common/Input";
 import { Button } from "@/components/common/Button";
 import { CourseTag } from "@/components/common/CourseTag";
+import { Select } from "@/components/common/Select";
 import { getInitialBlockTimes } from "../calendarUtils";
 
 interface StudyBlockModalProps {
@@ -82,17 +83,16 @@ export const StudyBlockModal: React.FC<StudyBlockModalProps> = ({
         ) : (
           <div className="flex flex-col gap-1.5">
             <label className="text-[13px] font-semibold text-[#252735]">Task</label>
-            <select
-              value={activeTaskId}
-              onChange={(e) => setSelectedTaskId(Number(e.target.value))}
-              required
-              className="h-[46px] px-3 rounded-lg border border-[#E5E6EB] text-sm text-[#252735] bg-white focus:outline-none focus:border-[#5553B7]"
-            >
-              <option value="">Select a task</option>
-              {tasks.map((t) => (
-                <option key={t.id} value={t.id}>{t.title}</option>
-              ))}
-            </select>
+            <Select
+              value={activeTaskId ? String(activeTaskId) : ""}
+              onChange={(val) => setSelectedTaskId(val ? Number(val) : 0)}
+              options={[
+                { value: "", label: "Select a task" },
+                ...tasks.map((t) => ({ value: String(t.id), label: t.title })),
+              ]}
+              className="w-full"
+              buttonClassName="h-[46px] text-sm font-normal"
+            />
           </div>
         )}
 
