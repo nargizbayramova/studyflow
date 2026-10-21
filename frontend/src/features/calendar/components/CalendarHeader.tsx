@@ -49,9 +49,11 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   totalScheduledHours,
 }) => {
   const busy = isGenerating || isRebalancing;
+
   return (
     <div className="flex flex-col gap-4 sm:gap-5">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Top Header: Title + Primary Action */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl sm:text-[30px] font-normal text-[#252735] tracking-tight">
             Study calendar
@@ -61,43 +63,47 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 self-start sm:self-auto w-full sm:w-auto">
+        <button
+          onClick={onAddBlock}
+          className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-[#5553B7] hover:bg-[#48469F] text-white text-xs sm:text-sm font-semibold transition-colors shadow-sm cursor-pointer self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4 flex-shrink-0" />
+          <span>Schedule session</span>
+        </button>
+      </div>
+
+      {/* Dedicated AI & Export Sub-bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2.5 sm:px-4 sm:py-2.5 bg-[#F7F7F4] border border-[#E5E6EB] rounded-xl text-xs">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={onGenerateSchedule}
             disabled={busy}
-            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border border-[#5553B7] bg-[#EFEEF9] hover:bg-[#E2E0F5] disabled:opacity-60 text-[#5553B7] text-xs sm:text-sm font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed flex-1 sm:flex-initial"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#5553B7] bg-[#EFEEF9] hover:bg-[#E2E0F5] disabled:opacity-60 text-[#5553B7] font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed"
           >
-            <Sparkles className="w-4 h-4 flex-shrink-0" />
+            <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
             <span>{isGenerating ? "Generating..." : "Generate AI Schedule"}</span>
           </button>
 
           <button
             onClick={onRebalanceSchedule}
             disabled={busy}
-            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border border-[#E5E6EB] bg-white hover:bg-slate-50 disabled:opacity-60 text-[#252735] text-xs sm:text-sm font-semibold transition-colors shadow-2xs cursor-pointer disabled:cursor-not-allowed flex-1 sm:flex-initial"
+            className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg border border-[#E5E6EB] bg-white hover:bg-slate-50 disabled:opacity-60 text-[#252735] font-semibold transition-colors shadow-2xs cursor-pointer disabled:cursor-not-allowed"
           >
             <span>{isRebalancing ? "Rebalancing..." : "🔄 Rebalance Schedule"}</span>
           </button>
-
-          <button
-            type="button"
-            onClick={() => void downloadScheduleIcs()}
-            title="Import into Google Calendar -> Settings -> Import & Export"
-            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border border-[#E5E6EB] bg-white hover:bg-slate-50 text-[#252735] text-xs sm:text-sm font-semibold transition-colors shadow-2xs cursor-pointer flex-1 sm:flex-initial"
-          >
-            <span>📅 Export .ics</span>
-          </button>
-
-          <button
-            onClick={onAddBlock}
-            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg bg-[#5553B7] hover:bg-[#48469F] text-white text-xs sm:text-sm font-semibold transition-colors shadow-sm cursor-pointer w-full sm:w-auto"
-          >
-            <Plus className="w-4 h-4 flex-shrink-0" />
-            <span>Schedule session</span>
-          </button>
         </div>
+
+        <button
+          type="button"
+          onClick={() => void downloadScheduleIcs()}
+          title="Import into Google Calendar -> Settings -> Import & Export"
+          className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg border border-[#E5E6EB] bg-white hover:bg-slate-50 text-[#252735] font-semibold transition-colors shadow-2xs cursor-pointer self-start sm:self-auto"
+        >
+          <span>📅 Export .ics</span>
+        </button>
       </div>
 
+      {/* Calendar Controls Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white p-3 sm:p-3.5 sm:px-5 border border-[#E5E6EB] rounded-xl shadow-sm">
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-1 border border-[#E5E6EB] rounded-lg p-0.5">
