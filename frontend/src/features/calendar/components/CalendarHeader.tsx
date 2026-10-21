@@ -1,5 +1,6 @@
 import React from "react";
 import { Plus, ChevronLeft, ChevronRight, Calendar, LayoutList, Grid3X3, Sparkles } from "lucide-react";
+import { downloadScheduleIcs } from "@/utils/calendar";
 import { CalendarViewMode, formatCalendarTitle } from "../calendarUtils";
 
 export type { CalendarViewMode };
@@ -76,6 +77,15 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
             className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border border-[#E5E6EB] bg-white hover:bg-slate-50 disabled:opacity-60 text-[#252735] text-xs sm:text-sm font-semibold transition-colors shadow-2xs cursor-pointer disabled:cursor-not-allowed flex-1 sm:flex-initial"
           >
             <span>{isRebalancing ? "Rebalancing..." : "🔄 Rebalance Schedule"}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void downloadScheduleIcs()}
+            title="Import into Google Calendar -> Settings -> Import & Export"
+            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg border border-[#E5E6EB] bg-white hover:bg-slate-50 text-[#252735] text-xs sm:text-sm font-semibold transition-colors shadow-2xs cursor-pointer flex-1 sm:flex-initial"
+          >
+            <span>📅 Export .ics</span>
           </button>
 
           <button

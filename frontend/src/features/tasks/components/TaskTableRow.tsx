@@ -3,6 +3,7 @@ import { Circle, CheckCircle2, MoreHorizontal } from "lucide-react";
 import { Task, Course } from "@/types";
 import { CourseTag } from "@/components/common/CourseTag";
 import { PriorityBadge, UrgencyBadge } from "@/components/common/PriorityBadge";
+import { buildGoogleCalendarUrl } from "@/utils/calendar";
 
 interface TaskTableRowProps {
   task: Task;
@@ -110,9 +111,25 @@ export const TaskTableRow: React.FC<TaskTableRowProps> = ({
       {/* Metadata columns: inline flex-wrap on mobile, fixed columns on md+ */}
       <div className="flex flex-wrap md:flex-nowrap items-center gap-2.5 md:gap-4 pl-7 md:pl-0">
         {/* Deadline */}
-        <div className="md:w-[155px] flex-shrink-0 flex items-center gap-1.5 md:flex-col md:items-start md:gap-0">
+        <div className="md:w-[155px] flex-shrink-0 flex items-center gap-1.5 md:flex-col md:items-start md:gap-0.5">
           <span className="text-xs font-medium text-[#252735]">{day}</span>
-          <span className="text-[11px] text-[#747683]">{time}</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-[#747683]">{time}</span>
+            <a
+              href={buildGoogleCalendarUrl({
+                title: `[${course?.code || "TASK"}] Deadline: ${task.title}`,
+                details: task.ai_recommendation || task.description || `Estimated: ${task.estimated_hours}h`,
+                date: task.due_date,
+              })}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="px-1.5 py-0.5 rounded bg-[#EFEEF9] hover:bg-[#E2E0F5] text-[#5553B7] text-[10px] font-semibold transition-colors whitespace-nowrap"
+              title="Add deadline to Google Calendar"
+            >
+              ➕ Google Cal
+            </a>
+          </div>
         </div>
 
         {/* Status */}

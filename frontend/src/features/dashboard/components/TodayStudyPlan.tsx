@@ -6,6 +6,7 @@ import { useSchedule } from "@/hooks/useSchedule";
 import { CourseTag } from "@/components/common/CourseTag";
 import { AIScheduleResultModal } from "@/features/calendar/components/AIScheduleResultModal";
 import { formatTimeRange, isToday, sumBlocksHours } from "@/features/calendar/calendarUtils";
+import { buildGoogleCalendarUrl } from "@/utils/calendar";
 
 interface TodayStudyPlanProps {
   studyBlocks: StudyBlock[];
@@ -168,7 +169,23 @@ export const TodayStudyPlan: React.FC<TodayStudyPlanProps> = ({
                 )}
                 <div className="flex items-center justify-between text-xs pt-0.5">
                   <CourseTag code={code} color={color} />
-                  <Clock3 className="w-3.5 h-3.5 text-[#747683]" />
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={buildGoogleCalendarUrl({
+                        title: `[${code}] Study: ${title}`,
+                        details: block.focus_goal || `StudyFlow session (${block.status})`,
+                        date: block.date || block.start_at,
+                        startTime: block.start_time || block.start_at,
+                        endTime: block.end_time || block.end_at,
+                      })}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-1.5 py-0.5 rounded bg-white/90 hover:bg-[#EFEEF9] text-[#5553B7] border border-[#E5E6EB] text-[10px] font-semibold transition-colors"
+                    >
+                      ➕ Google Cal
+                    </a>
+                    <Clock3 className="w-3.5 h-3.5 text-[#747683]" />
+                  </div>
                 </div>
               </div>
             );

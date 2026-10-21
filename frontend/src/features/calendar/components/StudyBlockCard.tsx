@@ -2,6 +2,7 @@ import React from "react";
 import { StudyBlock } from "@/types";
 import { CourseTag } from "@/components/common/CourseTag";
 import { CheckCircle2 } from "lucide-react";
+import { buildGoogleCalendarUrl } from "@/utils/calendar";
 import { formatTimeRange } from "../calendarUtils";
 
 interface StudyBlockCardProps {
@@ -37,36 +38,57 @@ export const StudyBlockCard: React.FC<StudyBlockCardProps> = ({
   const canMarkMissed = isPast || isMissed;
   const timeRange = formatTimeRange(block.start_at, block.end_at);
 
-  const actionButtons = onStatusChange && (
+  const gcalUrl = buildGoogleCalendarUrl({
+    title: `[${code}] Study: ${title}`,
+    details: block.focus_goal || `StudyFlow session (${block.status})`,
+    date: block.date || block.start_at,
+    startTime: block.start_time || block.start_at,
+    endTime: block.end_time || block.end_at,
+  });
+
+  const actionButtons = (
     <div
       className="hidden group-hover:flex items-center gap-1 flex-shrink-0"
       onClick={(e) => e.stopPropagation()}
     >
-      <button
-        type="button"
-        onClick={() => onStatusChange(block, "completed")}
-        className={`px-1.5 py-0.5 rounded text-[10px] leading-tight font-semibold transition-colors cursor-pointer ${
-          isCompleted
-            ? "bg-emerald-600 text-white"
-            : "bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs"
-        }`}
-        title={isCompleted ? "Undo Done" : "Mark Done"}
+      <a
+        href={gcalUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="px-1.5 py-0.5 rounded text-[10px] leading-tight font-semibold bg-white hover:bg-[#EFEEF9] text-[#5553B7] border border-[#E5E6EB] shadow-2xs transition-colors"
+        title="Add study block to Google Calendar"
       >
-        ✓ Done
-      </button>
-      {canMarkMissed && (
-        <button
-          type="button"
-          onClick={() => onStatusChange(block, "missed")}
-          className={`px-1.5 py-0.5 rounded text-[10px] leading-tight font-semibold transition-colors cursor-pointer ${
-            isMissed
-              ? "bg-rose-600 text-white"
-              : "bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs"
-          }`}
-          title={isMissed ? "Undo Missed" : "Mark Missed"}
-        >
-          ✕ Missed
-        </button>
+        ➕ Google Cal
+      </a>
+      {onStatusChange && (
+        <>
+          <button
+            type="button"
+            onClick={() => onStatusChange(block, "completed")}
+            className={`px-1.5 py-0.5 rounded text-[10px] leading-tight font-semibold transition-colors cursor-pointer ${
+              isCompleted
+                ? "bg-emerald-600 text-white"
+                : "bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs"
+            }`}
+            title={isCompleted ? "Undo Done" : "Mark Done"}
+          >
+            ✓ Done
+          </button>
+          {canMarkMissed && (
+            <button
+              type="button"
+              onClick={() => onStatusChange(block, "missed")}
+              className={`px-1.5 py-0.5 rounded text-[10px] leading-tight font-semibold transition-colors cursor-pointer ${
+                isMissed
+                  ? "bg-rose-600 text-white"
+                  : "bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs"
+              }`}
+              title={isMissed ? "Undo Missed" : "Mark Missed"}
+            >
+              ✕ Missed
+            </button>
+          )}
+        </>
       )}
     </div>
   );

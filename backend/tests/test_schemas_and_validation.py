@@ -594,3 +594,49 @@ async def test_rebalance_schedule_preserves_completed_and_recalculates_effort(mo
     assert statuses[200] == "planned"
 
 
+@pytest.mark.anyio
+async def test_export_schedule_ics():
+    from unittest.mock import AsyncMock, MagicMock
+    from app.api.v1 import schedule as schedule_api
+
+    paths = app.openapi()["paths"]
+    assert "/api/v1/schedule/export.ics" in paths
+
+    course = MagicMock(code="CS401", title="Algorithms")
+    mock_task = MagicMock(
+        id=50,
+        title="Graph Theory Project",
+        due_date=datetime(2026, 10, 25, 23, 59, tzinfo=UTC),
+        estimated_hours=4.0,
+        ai_recommendation="Focus on shortest path proofs",
+        description=None,
+        course=course,
+    )
+    mock_block = MagicMock(
+        id=99,
+        start_at=datetime(2026, 10, 22, 14, 0, tzinfo=UTC),
+        end_at=datetime(2026, 10, 22, 16, 0, tzinfo=UTC),
+        status=BlockStatus.PLANNED,
+        task=mock_task,
+    )
+
+    mock_db = MagicMock()
+    mock_db.scalars = AsyncMock(side_effect=[[mock_task], [mock_block]])
+    mock_user = MagicMock(id=9)
+
+    resp = await schedule_api.export_schedule_ics(user=mock_user, db=mock_db, semester="Fall 2026")
+    assert resp.media_type == "text/calendar"
+    assert resp.headers["Content-Disposition"] == 'attachment; filename="studyflow_schedule.ics"'
+    body = resp.body.decode("utf-8")
+    assert "BEGIN:VCALENDAR" in body
+    assert "VERSION:2.0" in body
+    assert "PRODID:-//StudyFlow//EN" in body
+    assert "DTSTART:20261022T140000" in body
+    assert "DTEND:20261022T160000" in body
+    assert "DTSTART;VALUE=DATE:20261025" in body
+    assert "SUMMARY:[CS401] Study: Graph Theory Project" in body
+    assert "SUMMARY:[CS401] Deadline: Graph Theory Project" in body
+    assert mock_db.scalars.await_count == 2
+
+
+

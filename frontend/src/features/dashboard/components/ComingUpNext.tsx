@@ -6,6 +6,7 @@ import { usePrioritizeTasks } from "@/api/tasks";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { CourseTag } from "@/components/common/CourseTag";
 import { PriorityBadge, UrgencyBadge } from "@/components/common/PriorityBadge";
+import { buildGoogleCalendarUrl } from "@/utils/calendar";
 
 interface ComingUpNextProps {
   tasks: Task[];
@@ -96,9 +97,21 @@ export const ComingUpNext: React.FC<ComingUpNextProps> = ({ tasks, courses }) =>
                   </div>
 
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    <div className="flex flex-col text-right">
+                    <div className="flex flex-col items-end gap-0.5 text-right">
                       <span className="text-xs font-semibold text-[#252735]">{monthDay}</span>
                       <span className="text-[11px] text-[#747683]">{time}</span>
+                      <a
+                        href={buildGoogleCalendarUrl({
+                          title: `[${course?.code || "TASK"}] Deadline: ${task.title}`,
+                          details: task.ai_recommendation || task.description,
+                          date: task.due_date,
+                        })}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-1.5 py-0.5 rounded bg-[#EFEEF9] hover:bg-[#E2E0F5] text-[#5553B7] text-[10px] font-semibold transition-colors whitespace-nowrap"
+                      >
+                        ➕ Google Cal
+                      </a>
                     </div>
                     {!task.urgency_level && <PriorityBadge priority={task.priority} />}
                   </div>
