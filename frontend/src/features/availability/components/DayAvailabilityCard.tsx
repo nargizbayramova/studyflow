@@ -1,76 +1,102 @@
 import React from "react";
-import { Trash2, Plus } from "lucide-react";
-import { AvailabilitySlot } from "@/types";
+import { Pencil } from "lucide-react";
+import { AvailabilitySlot, SlotKind } from "@/types";
+import { DaySlotColumn } from "./DaySlotColumn";
 
-interface DayAvailabilityCardProps {
-  dayName: string;
+interface DayAvailabilityRowProps {
   dayIndex: number;
+  dayName: string;
   slots: AvailabilitySlot[];
-  onAddSlot: (dayIndex: number) => void;
-  onDeleteSlot: (id: number) => void;
+  isSelectedDay: boolean;
+  selectedSlotId: number | null;
+  onSelectSlot: (slot: AvailabilitySlot) => void;
+  onAddSlotForDay: (dayIndex: number, kind: SlotKind) => void;
+  onEditDay: (dayIndex: number) => void;
 }
 
-export const DayAvailabilityCard: React.FC<DayAvailabilityCardProps> = ({
-  dayName,
+export const DayAvailabilityCard: React.FC<DayAvailabilityRowProps> = ({
   dayIndex,
+  dayName,
   slots,
-  onAddSlot,
-  onDeleteSlot,
+  isSelectedDay,
+  selectedSlotId,
+  onSelectSlot,
+  onAddSlotForDay,
+  onEditDay,
 }) => {
+  const availableSlots = slots.filter((s) => s.kind === "available");
+  const blockedSlots = slots.filter((s) => s.kind === "blocked");
+  const blockedKindLabel = dayIndex >= 5 ? "Personal time" : "Classes";
+
   return (
-    <div className="bg-white border border-[#E5E6EB] rounded-xl p-4 flex flex-col justify-between shadow-sm min-h-[220px]">
-      <div>
-        <div className="flex items-center justify-between pb-3 border-b border-[#F0F1F5] mb-3">
-          <h3 className="text-sm font-bold text-[#252735]">{dayName}</h3>
-          <span className="text-xs font-medium text-[#747683]">
-            {slots.length} {slots.length === 1 ? "slot" : "slots"}
-          </span>
-        </div>
-
-        {slots.length === 0 ? (
-          <p className="py-8 text-center text-xs text-[#747683]">No slots configured</p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {slots.map((slot) => {
-              const isAvail = slot.kind === "available";
-              return (
-                <div
-                  key={slot.id}
-                  className={`px-3 py-2 rounded-lg border flex items-center justify-between text-xs transition-colors ${
-                    isAvail
-                      ? "bg-[#EFEEF9] border-[#DEDCF5] text-[#5553B7]"
-                      : "bg-[#FCF3E3] border-[#F7E2BC] text-[#98651E]"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-[#252735]">
-                      {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
-                    </span>
-                    <span className="text-[11px] font-medium capitalize opacity-85">
-                      ({slot.kind})
-                    </span>
-                  </div>
-
-                  <button
-                    onClick={() => onDeleteSlot(slot.id)}
-                    className="text-[#747683] hover:text-red-500 p-1 rounded transition-colors"
-                    title="Delete slot"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
+    <div
+      onClick={() => onEditDay(dayIndex)}
+      className={`flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4 px-3 py-4 sm:py-[19px] border-b border-[#E5E6EB] transition-colors cursor-pointer ${
+        isSelectedDay ? "bg-[#EFEEF9] rounded-[8px]" : "bg-white hover:bg-[#F7F7F4]/60"
+      }`}
+    >
+      <div className="w-full sm:w-[92px] flex-shrink-0 flex items-center justify-between">
+        <span
+          className={`text-[12px] leading-[1.45] text-[#252735] ${
+            isSelectedDay ? "font-semibold" : "font-medium"
+          }`}
+        >
+          {dayName}
+        </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEditDay(dayIndex);
+          }}
+          className="sm:hidden p-1 text-[#747683] hover:text-[#252735] cursor-pointer"
+          aria-label={`Edit ${dayName} availability`}
+        >
+          <Pencil className="w-[15px] h-[15px]" />
+        </button>
       </div>
 
-      <button
-        onClick={() => onAddSlot(dayIndex)}
-        className="mt-4 pt-3 border-t border-[#F0F1F5] flex items-center justify-center gap-1.5 text-xs font-semibold text-[#5553B7] hover:text-[#48469F] transition-colors w-full"
-      >
-        <Plus className="w-3.5 h-3.5" /> Add time slot
-      </button>
+      <div className="flex-1 min-w-0">
+        <DaySlotColumn
+          slots={availableSlots}
+          selectedSlotId={selectedSlotId}
+          mobileHeader="Available study time"
+          mobileHeaderColor="text-[#327864]"
+          primaryTextColor="text-[#327864]"
+          subtitleSuffix="Available"
+          emptyText="No available slots"
+          onSelectSlot={onSelectSlot}
+          onEmptyClick={() => onAddSlotForDay(dayIndex, "available")}
+        />
+      </div>
+
+      <div className="w-full sm:w-[160px] flex-shrink-0">
+        <DaySlotColumn
+          slots={blockedSlots}
+          selectedSlotId={selectedSlotId}
+          mobileHeader="Blocked time"
+          mobileHeaderColor="text-[#747683]"
+          primaryTextColor="text-[#747683]"
+          subtitleSuffix={blockedKindLabel}
+          emptyText="No blocked slots"
+          onSelectSlot={onSelectSlot}
+          onEmptyClick={() => onAddSlotForDay(dayIndex, "blocked")}
+        />
+      </div>
+
+      <div className="hidden sm:flex w-[24px] flex-shrink-0 items-center justify-end">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEditDay(dayIndex);
+          }}
+          className="p-1 text-[#747683] hover:text-[#252735] transition-colors cursor-pointer"
+          aria-label={`Edit ${dayName} availability`}
+        >
+          <Pencil className="w-[15px] h-[15px]" />
+        </button>
+      </div>
     </div>
   );
 };

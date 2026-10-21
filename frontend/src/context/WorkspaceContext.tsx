@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState } from "react";
 import { useSemesters } from "@/api/courses";
 import { useAuth } from "@/context/AuthContext";
 
@@ -17,20 +17,24 @@ const DEFAULT_WORKSPACE = "Fall 2026";
 export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
   const { data: serverSemesters = [] } = useSemesters({ enabled: isAuthenticated });
-  const [workspace, setWorkspaceState] = useState<string>(() => {
+  const [workspaceState, setWorkspaceState] = useState<string>(() => {
     return localStorage.getItem(STORAGE_KEY) || DEFAULT_WORKSPACE;
   });
   const [customWorkspaces, setCustomWorkspaces] = useState<string[]>([]);
 
-  useEffect(() => {
-    if (serverSemesters.length > 0 && !localStorage.getItem(STORAGE_KEY)) {
-      setWorkspaceState(serverSemesters[0]);
-    }
-  }, [serverSemesters]);
+  const activeWorkspace =
+    serverSemesters.length > 0 &&
+    !serverSemesters.includes(workspaceState) &&
+    !customWorkspaces.includes(workspaceState)
+      ? serverSemesters[0]
+      : workspaceState;
 
   const setWorkspace = (ws: string) => {
     const trimmed = ws.trim();
     if (!trimmed) return;
+    if (!serverSemesters.includes(trimmed) && !customWorkspaces.includes(trimmed)) {
+      setCustomWorkspaces((prev) => [...prev, trimmed]);
+    }
     setWorkspaceState(trimmed);
     localStorage.setItem(STORAGE_KEY, trimmed);
   };
@@ -41,17 +45,18 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!customWorkspaces.includes(trimmed)) {
       setCustomWorkspaces((prev) => [...prev, trimmed]);
     }
-    setWorkspace(trimmed);
+    setWorkspaceState(trimmed);
+    localStorage.setItem(STORAGE_KEY, trimmed);
   };
 
   const allWorkspaces = Array.from(
-    new Set([workspace, ...serverSemesters, ...customWorkspaces, "Spring 2027", "Fall 2025"])
+    new Set([activeWorkspace, ...serverSemesters, ...customWorkspaces, "Spring 2027", "Fall 2025"])
   ).filter(Boolean);
 
   return (
     <WorkspaceContext.Provider
       value={{
-        workspace,
+        workspace: activeWorkspace,
         workspaces: allWorkspaces,
         setWorkspace,
         addWorkspace,
