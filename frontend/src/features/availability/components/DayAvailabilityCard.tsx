@@ -6,6 +6,7 @@ import { DaySlotColumn } from "./DaySlotColumn";
 interface DayAvailabilityRowProps {
   dayIndex: number;
   dayName: string;
+  dayDateLabel?: string | null;
   slots: AvailabilitySlot[];
   isSelectedDay: boolean;
   selectedSlotId: number | null;
@@ -17,6 +18,7 @@ interface DayAvailabilityRowProps {
 export const DayAvailabilityCard: React.FC<DayAvailabilityRowProps> = ({
   dayIndex,
   dayName,
+  dayDateLabel,
   slots,
   isSelectedDay,
   selectedSlotId,
@@ -31,11 +33,11 @@ export const DayAvailabilityCard: React.FC<DayAvailabilityRowProps> = ({
   return (
     <div
       onClick={() => onEditDay(dayIndex)}
-      className={`flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4 px-3 py-4 sm:py-[19px] border-b border-[#E5E6EB] transition-colors cursor-pointer ${
+      className={`group/dayrow flex flex-col sm:flex-row sm:items-start gap-2.5 sm:gap-4 px-3 py-4 sm:py-[16px] border-b border-[#E5E6EB] transition-colors cursor-pointer ${
         isSelectedDay ? "bg-[#EFEEF9] rounded-[8px]" : "bg-white hover:bg-[#F7F7F4]/60"
       }`}
     >
-      <div className="w-full sm:w-[92px] flex-shrink-0 flex items-center justify-between">
+      <div className="w-full sm:w-[92px] flex-shrink-0 flex items-center sm:flex-col sm:items-start justify-between pt-0.5">
         <span
           className={`text-[12px] leading-[1.45] text-[#252735] ${
             isSelectedDay ? "font-semibold" : "font-medium"
@@ -43,6 +45,9 @@ export const DayAvailabilityCard: React.FC<DayAvailabilityRowProps> = ({
         >
           {dayName}
         </span>
+        {dayDateLabel && (
+          <span className="text-[11px] text-[#747683] leading-tight">{dayDateLabel}</span>
+        )}
         <button
           type="button"
           onClick={(e) => {
@@ -65,12 +70,13 @@ export const DayAvailabilityCard: React.FC<DayAvailabilityRowProps> = ({
           primaryTextColor="text-[#327864]"
           subtitleSuffix="Available"
           emptyText="No available slots"
+          addLabel="Add available"
           onSelectSlot={onSelectSlot}
-          onEmptyClick={() => onAddSlotForDay(dayIndex, "available")}
+          onAddSlot={() => onAddSlotForDay(dayIndex, "available")}
         />
       </div>
 
-      <div className="w-full sm:w-[160px] flex-shrink-0">
+      <div className="w-full sm:w-[190px] flex-shrink-0">
         <DaySlotColumn
           slots={blockedSlots}
           selectedSlotId={selectedSlotId}
@@ -79,12 +85,13 @@ export const DayAvailabilityCard: React.FC<DayAvailabilityRowProps> = ({
           primaryTextColor="text-[#747683]"
           subtitleSuffix={blockedKindLabel}
           emptyText="No blocked slots"
+          addLabel="Add blocked"
           onSelectSlot={onSelectSlot}
-          onEmptyClick={() => onAddSlotForDay(dayIndex, "blocked")}
+          onAddSlot={() => onAddSlotForDay(dayIndex, "blocked")}
         />
       </div>
 
-      <div className="hidden sm:flex w-[24px] flex-shrink-0 items-center justify-end">
+      <div className="hidden sm:flex w-[24px] flex-shrink-0 items-center justify-end pt-1">
         <button
           type="button"
           onClick={(e) => {

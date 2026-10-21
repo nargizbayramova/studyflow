@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import {
   useAvailabilitySlots,
   useCreateSlot,
@@ -10,7 +10,13 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { useToast } from "@/context/ToastContext";
 import { Spinner } from "@/components/common/Spinner";
 import { AvailabilitySlot, SlotKind } from "@/types";
-import { computePlannedHoursThisWeek, computeSlotStats } from "./utils/availabilityUtils";
+import {
+  computePlannedHoursForWeek,
+  computeSlotStats,
+  getEffectiveSlotsForWeek,
+  getMondayOfWeek,
+  getWeekDatesFromMonday,
+} from "./utils/availabilityUtils";
 import { AvailabilityHeader } from "./components/AvailabilityHeader";
 import { RecurringWeekTable } from "./components/RecurringWeekTable";
 import { SlotModal } from "./components/SlotModal";
@@ -24,6 +30,8 @@ export const AvailabilityPage: React.FC = () => {
   const deleteSlot = useDeleteSlot();
   const toast = useToast();
 
+  const [scopeMode, setScopeMode] = useState<"recurring" | "week">("recurring");
+  const [weekMonday, setWeekMonday] = useState<Date>(() => getMondayOfWeek(new Date()));
   const [editorMode, setEditorMode] = useState<"edit" | "create">("edit");
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
   const [defaultDay, setDefaultDay] = useState<number>(3);
@@ -31,21 +39,35 @@ export const AvailabilityPage: React.FC = () => {
   const [isEditorVisible, setIsEditorVisible] = useState<boolean>(true);
   const editorRef = useRef<HTMLDivElement>(null);
 
+  const weekDates = useMemo(() => getWeekDatesFromMonday(weekMonday), [weekMonday]);
+  const visibleSlots = useMemo(
+    () => getEffectiveSlotsForWeek(slots, scopeMode === "week" ? weekDates : null),
+    [slots, scopeMode, weekDates]
+  );
+
   const fallbackSlot =
-    slots.find((s) => s.day_of_week === 3 && s.kind === "available") ?? slots[0] ?? null;
+    visibleSlots.find((s) => s.day_of_week === 3 && s.kind === "available") ??
+    visibleSlots[0] ??
+    null;
   const selectedSlot =
-    slots.find((s) => s.id === selectedSlotId) ?? (editorMode === "edit" ? fallbackSlot : null);
+    visibleSlots.find((s) => s.id === selectedSlotId) ??
+    (editorMode === "edit" ? fallbackSlot : null);
   const effectiveMode: "edit" | "create" =
     editorMode === "edit" && selectedSlot ? "edit" : "create";
-  const activeDayIndex = effectiveMode === "edit" && selectedSlot ? selectedSlot.day_of_week : defaultDay;
+  const activeDayIndex =
+    effectiveMode === "edit" && selectedSlot ? selectedSlot.day_of_week : defaultDay;
 
-  const { availableHours, blockedHours, availableCount, blockedCount } = computeSlotStats(slots);
-  const plannedHoursThisWeek = computePlannedHoursThisWeek(studyBlocks);
+  const { availableHours, blockedHours, availableCount, blockedCount } =
+    computeSlotStats(visibleSlots);
+  const plannedHoursThisWeek = computePlannedHoursForWeek(studyBlocks, weekDates);
 
   const revealEditor = () => {
     setIsEditorVisible(true);
     if (window.innerWidth < 1024) {
-      setTimeout(() => editorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 50);
+      setTimeout(
+        () => editorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }),
+        50
+      );
     }
   };
 
@@ -66,7 +88,7 @@ export const AvailabilityPage: React.FC = () => {
   };
 
   const handleEditDay = (dayIndex: number) => {
-    const daySlots = slots.filter((s) => s.day_of_week === dayIndex);
+    const daySlots = visibleSlots.filter((s) => s.day_of_week === dayIndex);
     const preferred = daySlots.find((s) => s.kind === "available") || daySlots[0];
     if (preferred) handleSelectSlot(preferred);
     else handleAddSlotForDay(dayIndex, "available");
@@ -86,12 +108,25 @@ export const AvailabilityPage: React.FC = () => {
         availableHours={availableHours}
         blockedHours={blockedHours}
         plannedHoursThisWeek={plannedHoursThisWeek}
+        scopeMode={scopeMode}
+        weekDates={weekDates}
+        onScopeModeChange={setScopeMode}
+        onShiftWeek={(step) =>
+          setWeekMonday((prev) => {
+            const next = new Date(prev);
+            next.setDate(prev.getDate() + step * 7);
+            return next;
+          })
+        }
+        onResetCurrentWeek={() => setWeekMonday(getMondayOfWeek(new Date()))}
         onAddSlot={() => handleAddSlotForDay(activeDayIndex, "available")}
       />
 
       <div className="flex flex-col lg:flex-row items-start gap-6">
         <RecurringWeekTable
-          slots={slots}
+          slots={visibleSlots}
+          scopeMode={scopeMode}
+          weekDates={weekDates}
           availableCount={availableCount}
           blockedCount={blockedCount}
           activeDayIndex={activeDayIndex}
@@ -108,33 +143,37 @@ export const AvailabilityPage: React.FC = () => {
               key={
                 effectiveMode === "edit" && selectedSlot
                   ? `edit-${selectedSlot.id}`
-                  : `create-${defaultDay}-${defaultKind}`
+                  : `create-${defaultDay}-${defaultKind}-${scopeMode}-${weekMonday.getTime()}`
               }
               mode={effectiveMode}
               selectedSlot={selectedSlot}
               defaultDay={defaultDay}
               defaultKind={defaultKind}
-              daySlots={slots}
+              defaultRepeat={scopeMode === "week" ? "specific" : "recurring"}
+              weekDates={weekDates}
+              daySlots={visibleSlots}
+              allSlots={slots}
               onSelectSlot={handleSelectSlot}
+              onStartCreateForDay={handleAddSlotForDay}
               onCreate={async (data) => {
                 const created = await createSlot.mutateAsync(data);
                 setEditorMode("edit");
                 setSelectedSlotId(created.id);
-                toast.success("Recurring slot added");
+                toast.success("Availability slot added");
               }}
               onUpdate={async (id, data) => {
                 await updateSlot.mutateAsync({ id, data });
-                toast.success("Recurring slot updated");
+                toast.success("Availability slot updated");
               }}
               onDelete={async (id) => {
                 await deleteSlot.mutateAsync(id);
-                const remaining = slots.filter((s) => s.id !== id);
+                const remaining = visibleSlots.filter((s) => s.id !== id);
                 setSelectedSlotId(remaining[0]?.id ?? null);
                 setEditorMode(remaining.length > 0 ? "edit" : "create");
-                toast.showToast({ type: "info", message: "Recurring slot deleted" });
+                toast.showToast({ type: "info", message: "Availability slot deleted" });
               }}
               onCancel={() => {
-                if (effectiveMode === "create" && slots.length > 0) {
+                if (effectiveMode === "create" && visibleSlots.length > 0) {
                   setEditorMode("edit");
                 } else {
                   setIsEditorVisible(false);

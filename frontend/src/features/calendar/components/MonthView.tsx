@@ -1,6 +1,6 @@
 import React from "react";
 import { StudyBlock } from "@/types";
-import { getMonthGridDays, isToday, toDateKey, WEEKDAY_LABELS } from "../calendarUtils";
+import { getMonthGridDays, isToday, toDateKey, toSolidPastel, WEEKDAY_LABELS } from "../calendarUtils";
 
 interface MonthViewProps {
   currentDate: Date;
@@ -23,7 +23,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
         {WEEKDAY_LABELS.map((day) => (
           <div
             key={day}
-            className="p-2 sm:p-3 text-center text-[10px] sm:text-xs font-semibold text-[#747683] uppercase tracking-wider border-r border-[#E5E6EB] last:border-r-0"
+            className="min-w-0 p-2 sm:p-3 text-center text-[10px] sm:text-xs font-semibold text-[#747683] uppercase tracking-wider border-r border-[#E5E6EB] last:border-r-0"
           >
             <span className="sm:hidden">{day.charAt(0)}</span>
             <span className="hidden sm:inline">{day}</span>
@@ -44,7 +44,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                 slot.setHours(10, 0, 0, 0);
                 onSelectSlot(slot);
               }}
-              className={`min-h-[78px] sm:min-h-[110px] p-1 sm:p-2 border-b border-r border-[#F0F1F5] flex flex-col justify-between transition-colors hover:bg-slate-50/70 cursor-pointer ${
+              className={`min-w-0 overflow-hidden min-h-[78px] sm:min-h-[110px] p-1 sm:p-2 border-b border-r border-[#F0F1F5] flex flex-col justify-between transition-colors hover:bg-slate-50/70 cursor-pointer ${
                 !isCurrentMonth ? "bg-[#FAFAF8]/50 text-slate-300" : ""
               }`}
             >
@@ -79,10 +79,10 @@ export const MonthView: React.FC<MonthViewProps> = ({
                         onSelectBlock(b);
                       }}
                       style={{
-                        backgroundColor: `${color}18`,
+                        backgroundColor: toSolidPastel(color),
                         borderLeft: `2.5px solid ${color}`,
                       }}
-                      className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-[#252735] text-left truncate hover:opacity-85 transition-opacity"
+                      className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-[#252735] text-left truncate transition-colors"
                     >
                       {b.course_code && (
                         <span className="opacity-75 mr-1 font-bold">{b.course_code}</span>

@@ -124,11 +124,18 @@ async def _load_concrete_windows(
     all_slots = list(await db.scalars(slot_stmt))
     avail_by_dow: dict[int, list[tuple[time, time]]] = {}
     blocked_by_dow: dict[int, list[tuple[time, time]]] = {}
+    avail_by_date: dict[date, list[tuple[time, time]]] = {}
+    blocked_by_date: dict[date, list[tuple[time, time]]] = {}
     for s in all_slots:
-        target = avail_by_dow if s.kind == SlotKind.AVAILABLE else blocked_by_dow
-        target.setdefault(s.day_of_week, []).append((s.start_time, s.end_time))
+        slot_specific_date = getattr(s, "specific_date", None)
+        if isinstance(slot_specific_date, date):
+            date_target = avail_by_date if s.kind == SlotKind.AVAILABLE else blocked_by_date
+            date_target.setdefault(slot_specific_date, []).append((s.start_time, s.end_time))
+        else:
+            target = avail_by_dow if s.kind == SlotKind.AVAILABLE else blocked_by_dow
+            target.setdefault(s.day_of_week, []).append((s.start_time, s.end_time))
 
-    if not avail_by_dow:
+    if not avail_by_dow and not avail_by_date:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             "No available study hours configured. Add weekly availability slots first.",
@@ -140,8 +147,8 @@ async def _load_concrete_windows(
     for offset in range(14):
         cur_date = today + timedelta(days=offset)
         dow = cur_date.weekday()
-        day_avails = avail_by_dow.get(dow, [])
-        day_blocked = blocked_by_dow.get(dow, [])
+        day_avails = avail_by_dow.get(dow, []) + avail_by_date.get(cur_date, [])
+        day_blocked = blocked_by_dow.get(dow, []) + blocked_by_date.get(cur_date, [])
         if not day_avails:
             continue
 

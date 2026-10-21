@@ -5,7 +5,7 @@ import { StudyBlock, Course, Task } from "@/types";
 import { useSchedule } from "@/hooks/useSchedule";
 import { CourseTag } from "@/components/common/CourseTag";
 import { AIScheduleResultModal } from "@/features/calendar/components/AIScheduleResultModal";
-import { formatTimeRange, isToday, sumBlocksHours } from "@/features/calendar/calendarUtils";
+import { formatTimeRange, isToday, sumBlocksHours, toSolidPastel } from "@/features/calendar/calendarUtils";
 import { buildGoogleCalendarUrl } from "@/utils/calendar";
 
 interface TodayStudyPlanProps {
@@ -125,10 +125,8 @@ export const TodayStudyPlan: React.FC<TodayStudyPlanProps> = ({
             return (
               <div
                 key={block.id}
-                className={`p-3.5 rounded-lg flex flex-col gap-2 transition-opacity ${
-                  isCompleted || isMissed ? "opacity-65" : ""
-                }`}
-                style={{ backgroundColor: `${color}15`, borderLeft: `3px solid ${color}` }}
+                className="p-3.5 rounded-lg flex flex-col gap-2"
+                style={{ backgroundColor: toSolidPastel(color), borderLeft: `3px solid ${color}` }}
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-semibold text-[#252735]">

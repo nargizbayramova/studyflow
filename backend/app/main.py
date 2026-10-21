@@ -7,9 +7,12 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from sqlalchemy import text
+
 from app.api.v1 import health
 from app.api.v1.router import api_router
 from app.core.config import settings
+from app.core.database import engine
 from app.services import monitoring
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
@@ -36,6 +39,19 @@ TAGS_METADATA = [
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(
+                text("ALTER TABLE availability_slots ADD COLUMN IF NOT EXISTS specific_date DATE")
+            )
+            await conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_availability_slots_specific_date "
+                    "ON availability_slots (specific_date)"
+                )
+            )
+    except Exception:
+        logger.debug("Skipped startup schema check for specific_date", exc_info=True)
     await monitoring.start()
     yield
     await monitoring.stop()

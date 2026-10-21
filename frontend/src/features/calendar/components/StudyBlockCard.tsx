@@ -1,9 +1,8 @@
 import React from "react";
+import { Clock } from "lucide-react";
 import { StudyBlock } from "@/types";
-import { CourseTag } from "@/components/common/CourseTag";
-import { CheckCircle2 } from "lucide-react";
 import { buildGoogleCalendarUrl } from "@/utils/calendar";
-import { formatTimeRange } from "../calendarUtils";
+import { START_HOUR, formatTimeRange, toSolidPastel } from "../calendarUtils";
 
 interface StudyBlockCardProps {
   block: StudyBlock;
@@ -24,18 +23,18 @@ export const StudyBlockCard: React.FC<StudyBlockCardProps> = ({
   const bEnd = new Date(block.end_at);
   const startHour = bStart.getHours() + bStart.getMinutes() / 60;
   const endHour = bEnd.getHours() + bEnd.getMinutes() / 60;
+  const durationHours = Math.max(0.5, Math.round((endHour - startHour) * 10) / 10);
 
-  const top = Math.max(0, (startHour - 8) * hourHeight);
-  const minHeight = compact ? 28 : 34;
-  const height = Math.max(minHeight, (endHour - startHour) * hourHeight - 3);
+  const top = Math.max(0, (startHour - START_HOUR) * hourHeight + 3);
+  const minHeight = compact ? 42 : 52;
+  const height = Math.max(minHeight, (endHour - startHour) * hourHeight - 6);
 
   const color = block.course_color || "#5553B7";
   const code = block.course_code || "STUDY";
   const title = block.task_title || "Study Session";
   const isCompleted = block.status === "completed";
   const isMissed = block.status === "missed";
-  const isPast = new Date(block.end_at).getTime() <= Date.now();
-  const canMarkMissed = isPast || isMissed;
+  const canMarkMissed = bEnd.getTime() <= Date.now() || isMissed;
   const timeRange = formatTimeRange(block.start_at, block.end_at);
 
   const gcalUrl = buildGoogleCalendarUrl({
@@ -46,53 +45,6 @@ export const StudyBlockCard: React.FC<StudyBlockCardProps> = ({
     endTime: block.end_time || block.end_at,
   });
 
-  const actionButtons = (
-    <div
-      className="hidden group-hover:flex items-center gap-1 flex-shrink-0"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <a
-        href={gcalUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="px-1.5 py-0.5 rounded text-[10px] leading-tight font-semibold bg-white hover:bg-[#EFEEF9] text-[#5553B7] border border-[#E5E6EB] shadow-2xs transition-colors"
-        title="Add study block to Google Calendar"
-      >
-        ➕ Google Cal
-      </a>
-      {onStatusChange && (
-        <>
-          <button
-            type="button"
-            onClick={() => onStatusChange(block, "completed")}
-            className={`px-1.5 py-0.5 rounded text-[10px] leading-tight font-semibold transition-colors cursor-pointer ${
-              isCompleted
-                ? "bg-emerald-600 text-white"
-                : "bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs"
-            }`}
-            title={isCompleted ? "Undo Done" : "Mark Done"}
-          >
-            ✓ Done
-          </button>
-          {canMarkMissed && (
-            <button
-              type="button"
-              onClick={() => onStatusChange(block, "missed")}
-              className={`px-1.5 py-0.5 rounded text-[10px] leading-tight font-semibold transition-colors cursor-pointer ${
-                isMissed
-                  ? "bg-rose-600 text-white"
-                  : "bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs"
-              }`}
-              title={isMissed ? "Undo Missed" : "Mark Missed"}
-            >
-              ✕ Missed
-            </button>
-          )}
-        </>
-      )}
-    </div>
-  );
-
   return (
     <div
       onClick={(e) => {
@@ -102,63 +54,87 @@ export const StudyBlockCard: React.FC<StudyBlockCardProps> = ({
       style={{
         top: `${top}px`,
         height: `${height}px`,
-        backgroundColor: `${color}18`,
-        borderLeft: `${compact ? 3 : 4}px solid ${color}`,
-        borderTop: `1px solid ${color}35`,
-        borderRight: `1px solid ${color}35`,
-        borderBottom: `1px solid ${color}35`,
+        backgroundColor: toSolidPastel(color),
+        borderLeft: `3px solid ${color}`,
       }}
-      className={`group absolute ${
-        compact
-          ? "left-1 right-1 rounded-md p-1.5 flex-col justify-between overflow-hidden"
-          : "left-2 right-2 rounded-lg p-2.5 items-center justify-between"
-      } flex shadow-xs hover:shadow-md transition-all cursor-pointer z-10 ${
-        isCompleted || isMissed ? "opacity-75" : ""
-      }`}
+      className="group absolute left-1.5 right-1.5 rounded-[6px] p-2 flex flex-col justify-between overflow-hidden hover:shadow-md transition-shadow cursor-pointer z-10"
     >
-      {compact ? (
-        <>
-          <div className="flex items-center justify-between gap-1 leading-none">
-            <CourseTag code={code} color={color} />
-            <span className="text-[10px] font-medium text-[#747683] truncate">{timeRange}</span>
-          </div>
-          <div className="flex items-center justify-between gap-1 mt-0.5">
-            <span
-              className={`text-[11px] font-bold text-[#252735] truncate ${
-                isCompleted ? "line-through" : ""
-              }`}
-            >
-              {title}
-            </span>
-            {actionButtons}
-            {isCompleted && (
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 group-hover:hidden" />
+      <div className="flex flex-col gap-0.5 min-w-0">
+        <span
+          className="text-[11px] font-semibold leading-tight truncate"
+          style={{ color }}
+        >
+          {isCompleted ? `✓ ${title}` : title}
+        </span>
+        <span className="text-[11px] font-normal leading-tight text-[#747683] truncate">
+          {timeRange}
+        </span>
+
+        {(durationHours >= 1.5 || !compact) && (
+          <div className="mt-0.5">
+            {isCompleted ? (
+              <span className="text-[11px] leading-tight truncate" style={{ color }}>
+                ✓ Session done · {durationHours} h
+              </span>
+            ) : isMissed ? (
+              <span className="text-[11px] leading-tight truncate text-[#B45353]">
+                ✕ Missed · {durationHours} h
+              </span>
+            ) : (
+              <span
+                className="text-[11px] leading-tight truncate inline-flex items-center gap-1"
+                style={{ color }}
+              >
+                <Clock className="w-2.5 h-2.5 flex-shrink-0" />
+                <span>Scheduled · {durationHours} h</span>
+              </span>
             )}
           </div>
-        </>
-      ) : (
-        <>
-          <div className="flex items-center gap-3 min-w-0">
-            <CourseTag code={code} color={color} />
-            <div className="flex flex-col min-w-0">
-              <span
-                className={`text-xs font-bold text-[#252735] truncate ${
-                  isCompleted ? "line-through" : ""
+        )}
+      </div>
+
+      <div
+        className="hidden group-hover:flex items-center gap-1 pt-0.5 flex-wrap"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <a
+          href={gcalUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-1.5 py-0.5 rounded text-[9px] leading-tight font-semibold bg-white hover:bg-[#EFEEF9] text-[#5553B7] border border-[#E5E6EB] shadow-2xs"
+          title="Add study block to Google Calendar"
+        >
+          ➕ Google Cal
+        </a>
+        {onStatusChange && (
+          <>
+            <button
+              type="button"
+              onClick={() => onStatusChange(block, "completed")}
+              className={`px-1.5 py-0.5 rounded text-[9px] leading-tight font-semibold cursor-pointer ${
+                isCompleted
+                  ? "bg-emerald-600 text-white"
+                  : "bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200"
+              }`}
+            >
+              ✓ Done
+            </button>
+            {canMarkMissed && (
+              <button
+                type="button"
+                onClick={() => onStatusChange(block, "missed")}
+                className={`px-1.5 py-0.5 rounded text-[9px] leading-tight font-semibold cursor-pointer ${
+                  isMissed
+                    ? "bg-rose-600 text-white"
+                    : "bg-white hover:bg-rose-50 text-rose-700 border border-rose-200"
                 }`}
               >
-                {title}
-              </span>
-              <span className="text-[11px] text-[#747683]">
-                {timeRange} &bull; {block.status}
-              </span>
-            </div>
-          </div>
-          {actionButtons}
-          {isCompleted && (
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 group-hover:hidden" />
-          )}
-        </>
-      )}
+                ✕ Missed
+              </button>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 };
