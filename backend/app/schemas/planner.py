@@ -1,4 +1,4 @@
-from datetime import datetime, time
+from datetime import date, datetime, time
 from typing import Annotated
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, EmailStr, Field, model_validator
@@ -132,6 +132,7 @@ class AITaskPrioritizationResult(BaseModel):
 
 class SlotCreate(BaseModel):
     day_of_week: int = Field(ge=0, le=6, description="0 = Monday ... 6 = Sunday")
+    specific_date: date | None = None
     start_time: time
     end_time: time
     kind: SlotKind = SlotKind.AVAILABLE
@@ -140,11 +141,14 @@ class SlotCreate(BaseModel):
     def _end_after_start(self) -> "SlotCreate":
         if self.end_time <= self.start_time:
             raise ValueError("end_time must be after start_time")
+        if self.specific_date is not None:
+            self.day_of_week = self.specific_date.weekday()
         return self
 
 
 class SlotUpdate(BaseModel):
     day_of_week: int | None = Field(None, ge=0, le=6)
+    specific_date: date | None = None
     start_time: time | None = None
     end_time: time | None = None
     kind: SlotKind | None = None
@@ -153,12 +157,15 @@ class SlotUpdate(BaseModel):
     def _end_after_start(self) -> "SlotUpdate":
         if self.start_time is not None and self.end_time is not None and self.end_time <= self.start_time:
             raise ValueError("end_time must be after start_time")
+        if self.specific_date is not None:
+            self.day_of_week = self.specific_date.weekday()
         return self
 
 
 class SlotRead(ORM):
     id: int
     day_of_week: int
+    specific_date: date | None = None
     start_time: time
     end_time: time
     kind: SlotKind

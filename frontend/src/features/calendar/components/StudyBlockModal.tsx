@@ -17,13 +17,7 @@ interface StudyBlockModalProps {
   initialSlot: Date | null;
 }
 
-export const StudyBlockModal: React.FC<StudyBlockModalProps> = (props) => {
-  if (!props.isOpen) return null;
-  const modalKey = props.block?.id ?? props.initialSlot?.getTime() ?? "new";
-  return <StudyBlockModalContent key={modalKey} {...props} />;
-};
-
-const StudyBlockModalContent: React.FC<StudyBlockModalProps> = ({
+export const StudyBlockModal: React.FC<StudyBlockModalProps> = ({
   isOpen,
   onClose,
   block,
@@ -31,7 +25,7 @@ const StudyBlockModalContent: React.FC<StudyBlockModalProps> = ({
 }) => {
   const { workspace } = useWorkspace();
   const { updateBlockStatus } = useSchedule();
-  const { data: tasks = [] } = useTasks({ semester: workspace }, { enabled: !block });
+  const { data: tasks = [] } = useTasks({ semester: workspace }, { enabled: isOpen && !block });
   const createBlock = useCreateStudyBlock();
   const updateBlock = useUpdateStudyBlock();
   const deleteBlock = useDeleteStudyBlock();
@@ -41,6 +35,8 @@ const StudyBlockModalContent: React.FC<StudyBlockModalProps> = ({
   const [startAt, setStartAt] = useState(initialTimes.start);
   const [endAt, setEndAt] = useState(initialTimes.end);
   const [error, setError] = useState<string | null>(null);
+
+  if (!isOpen) return null;
 
   const activeTaskId = selectedTaskId || tasks[0]?.id || "";
   const isSubmitting = createBlock.isPending || updateBlock.isPending || deleteBlock.isPending;
@@ -65,7 +61,7 @@ const StudyBlockModalContent: React.FC<StudyBlockModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={block ? "Study session detail" : "Schedule study session"}>
+    <Modal isOpen={isOpen} onClose={onClose} title={block ? "Study session detail" : "Schedule study block"}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {error && (
           <div className="p-2.5 rounded-lg bg-rose-50 text-rose-700 text-xs font-medium">{error}</div>
@@ -119,7 +115,6 @@ const StudyBlockModalContent: React.FC<StudyBlockModalProps> = ({
                     ? "bg-emerald-600 text-white"
                     : "bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200"
                 }`}
-                title={block.status === "completed" ? "Undo Done" : "Mark Done"}
               >
                 ✓ Done
               </button>
@@ -135,7 +130,6 @@ const StudyBlockModalContent: React.FC<StudyBlockModalProps> = ({
                       ? "bg-rose-600 text-white"
                       : "bg-white hover:bg-rose-50 text-rose-700 border border-rose-200"
                   }`}
-                  title={block.status === "missed" ? "Undo Missed" : "Mark Missed"}
                 >
                   ✕ Missed
                 </button>
@@ -149,7 +143,7 @@ const StudyBlockModalContent: React.FC<StudyBlockModalProps> = ({
                   onClose();
                 }
               }}
-              className="text-xs font-medium text-rose-600 hover:underline cursor-pointer ml-auto"
+              className="text-xs font-medium text-[#B45353] hover:underline cursor-pointer ml-auto"
             >
               Delete session
             </button>
@@ -161,7 +155,7 @@ const StudyBlockModalContent: React.FC<StudyBlockModalProps> = ({
             Cancel
           </Button>
           <Button type="submit" isLoading={isSubmitting} className="bg-[#5553B7] hover:bg-[#48469F]">
-            {block ? "Reschedule" : "Schedule session"}
+            {block ? "Reschedule" : "Schedule study block"}
           </Button>
         </div>
       </form>

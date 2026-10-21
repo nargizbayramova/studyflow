@@ -1,8 +1,8 @@
 import enum
-from datetime import time
+from datetime import date, time
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, Enum, ForeignKey, SmallInteger, Time
+from sqlalchemy import CheckConstraint, Date, Enum, ForeignKey, SmallInteger, Time
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -28,6 +28,7 @@ class AvailabilitySlot(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     day_of_week: Mapped[int] = mapped_column(SmallInteger)  # 0 = Monday ... 6 = Sunday
+    specific_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
     start_time: Mapped[time] = mapped_column(Time)
     end_time: Mapped[time] = mapped_column(Time)
     kind: Mapped[SlotKind] = mapped_column(

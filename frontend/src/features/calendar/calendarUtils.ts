@@ -1,9 +1,11 @@
 import React from "react";
-import { StudyBlock } from "@/types";
+import { AvailabilitySlot, StudyBlock, Task } from "@/types";
 
 export type CalendarViewMode = "day" | "week" | "month";
 
-export const CALENDAR_HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
+export const START_HOUR = 9;
+export const END_HOUR = 21;
+export const CALENDAR_HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
 export const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export function toDateKey(d: Date | string): string {
@@ -11,8 +13,45 @@ export function toDateKey(d: Date | string): string {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
 
+export function toIsoDateStr(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+export function getSlotsForCalendarDate(
+  slots: AvailabilitySlot[],
+  date: Date
+): AvailabilitySlot[] {
+  const dayIndex = getDayOfWeekIndex(date);
+  const isoDate = toIsoDateStr(date);
+  return slots.filter(
+    (s) => (!s.specific_date && s.day_of_week === dayIndex) || s.specific_date === isoDate
+  );
+}
+
 export function isToday(d: Date): boolean {
   return toDateKey(d) === toDateKey(new Date());
+}
+
+/** Convert JS Date.getDay() (0=Sun..6=Sat) to 0=Mon..6=Sun */
+export function getDayOfWeekIndex(d: Date): number {
+  return (d.getDay() + 6) % 7;
+}
+
+export function parseTimeHours(timeStr: string): number {
+  const [h, m] = timeStr.split(":").map(Number);
+  return (h || 0) + (m || 0) / 60;
+}
+
+/** Blend hex color with white into a 100% opaque pastel rgb() string */
+export function toSolidPastel(hex: string, ratio = 0.14): string {
+  const clean = hex.replace("#", "");
+  if (clean.length !== 6) return "#EFEEF9";
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  const mix = (c: number) => Math.round(255 * (1 - ratio) + c * ratio);
+  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
 }
 
 export function groupBlocksByDate(blocks: StudyBlock[]): Map<string, StudyBlock[]> {
@@ -26,12 +65,42 @@ export function groupBlocksByDate(blocks: StudyBlock[]): Map<string, StudyBlock[
   return map;
 }
 
+export function groupTasksByDueDate(tasks: Task[]): Map<string, Task[]> {
+  const map = new Map<string, Task[]>();
+  for (const task of tasks) {
+    const key = toDateKey(task.due_date);
+    const list = map.get(key);
+    if (list) list.push(task);
+    else map.set(key, [task]);
+  }
+  return map;
+}
+
 export function sumBlocksHours(blocks: StudyBlock[]): number {
   const total = blocks.reduce(
     (acc, b) => acc + (new Date(b.end_at).getTime() - new Date(b.start_at).getTime()) / 3_600_000,
     0
   );
   return Math.round(total * 10) / 10;
+}
+
+export function computeWeeklyAvailabilitySummary(
+  slots: AvailabilitySlot[],
+  weekDays?: Date[]
+) {
+  const weekIsoSet = weekDays ? new Set(weekDays.map(toIsoDateStr)) : null;
+  let availableHours = 0;
+  let blockedHours = 0;
+  for (const s of slots) {
+    if (s.specific_date && (!weekIsoSet || !weekIsoSet.has(s.specific_date))) continue;
+    const hrs = Math.max(0, parseTimeHours(s.end_time) - parseTimeHours(s.start_time));
+    if (s.kind === "available") availableHours += hrs;
+    else blockedHours += hrs;
+  }
+  return {
+    availableHours: Math.round(availableHours * 10) / 10,
+    blockedHours: Math.round(blockedHours * 10) / 10,
+  };
 }
 
 export function shiftCalendarDate(date: Date, mode: CalendarViewMode, step: -1 | 1): Date {
@@ -74,34 +143,30 @@ export function getMonthGridDays(currentDate: Date): { date: Date; isCurrentMont
   return days;
 }
 
-export function getViewScheduledHours(
+export function getViewBlocks(
   blocks: StudyBlock[],
   currentDate: Date,
   viewMode: CalendarViewMode,
   weekDays: Date[]
-): number {
+): StudyBlock[] {
   if (viewMode === "day") {
     const targetKey = toDateKey(currentDate);
-    return sumBlocksHours(blocks.filter((b) => toDateKey(b.start_at) === targetKey));
+    return blocks.filter((b) => toDateKey(b.start_at) === targetKey);
   }
   if (viewMode === "week") {
     const start = weekDays[0].getTime();
     const end = new Date(weekDays[6]).setHours(23, 59, 59, 999);
-    return sumBlocksHours(
-      blocks.filter((b) => {
-        const t = new Date(b.start_at).getTime();
-        return t >= start && t <= end;
-      })
-    );
+    return blocks.filter((b) => {
+      const t = new Date(b.start_at).getTime();
+      return t >= start && t <= end;
+    });
   }
   const m = currentDate.getMonth();
   const y = currentDate.getFullYear();
-  return sumBlocksHours(
-    blocks.filter((b) => {
-      const bd = new Date(b.start_at);
-      return bd.getMonth() === m && bd.getFullYear() === y;
-    })
-  );
+  return blocks.filter((b) => {
+    const bd = new Date(b.start_at);
+    return bd.getMonth() === m && bd.getFullYear() === y;
+  });
 }
 
 export function formatCalendarTitle(
@@ -112,7 +177,7 @@ export function formatCalendarTitle(
   if (viewMode === "day") {
     return currentDate.toLocaleDateString("en-US", {
       weekday: "long",
-      month: "short",
+      month: "long",
       day: "numeric",
       year: "numeric",
     });
@@ -122,8 +187,12 @@ export function formatCalendarTitle(
   }
   const start = weekDays[0];
   const end = weekDays[6];
-  const sMonth = start.toLocaleDateString("en-US", { month: "short" });
-  return `Week of ${sMonth} ${start.getDate()}–${end.getDate()}, ${end.getFullYear()}`;
+  const sMonth = start.toLocaleDateString("en-US", { month: "long" });
+  const eMonth = end.toLocaleDateString("en-US", { month: "long" });
+  if (sMonth === eMonth) {
+    return `${sMonth} ${start.getDate()}–${end.getDate()}, ${end.getFullYear()}`;
+  }
+  return `${sMonth} ${start.getDate()}–${eMonth} ${end.getDate()}, ${end.getFullYear()}`;
 }
 
 export function formatHourLabel(h: number): string {
@@ -164,7 +233,7 @@ export function getSlotFromClick(
   hourHeight: number
 ): Date {
   const rect = e.currentTarget.getBoundingClientRect();
-  const clickedHour = Math.floor((e.clientY - rect.top) / hourHeight) + 8;
+  const clickedHour = Math.floor((e.clientY - rect.top) / hourHeight) + START_HOUR;
   const slot = new Date(baseDate);
   slot.setHours(clickedHour, 0, 0, 0);
   return slot;
@@ -173,5 +242,7 @@ export function getSlotFromClick(
 export function getCurrentTimeOffset(hourHeight: number): number | null {
   const now = new Date();
   const nowHours = now.getHours() + now.getMinutes() / 60;
-  return nowHours >= 8 && nowHours <= 22 ? (nowHours - 8) * hourHeight : null;
+  return nowHours >= START_HOUR && nowHours <= END_HOUR
+    ? (nowHours - START_HOUR) * hourHeight
+    : null;
 }

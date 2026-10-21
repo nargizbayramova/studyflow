@@ -594,3 +594,185 @@ async def test_rebalance_schedule_preserves_completed_and_recalculates_effort(mo
     assert statuses[200] == "planned"
 
 
+@pytest.mark.anyio
+async def test_export_schedule_ics():
+    from unittest.mock import AsyncMock, MagicMock
+    from app.api.v1 import schedule as schedule_api
+
+    paths = app.openapi()["paths"]
+    assert "/api/v1/schedule/export.ics" in paths
+
+    course = MagicMock(code="CS401", title="Algorithms")
+    mock_task = MagicMock(
+        id=50,
+        title="Graph Theory Project",
+        due_date=datetime(2026, 10, 25, 23, 59, tzinfo=UTC),
+        estimated_hours=4.0,
+        ai_recommendation="Focus on shortest path proofs",
+        description=None,
+        course=course,
+    )
+    mock_block = MagicMock(
+        id=99,
+        start_at=datetime(2026, 10, 22, 14, 0, tzinfo=UTC),
+        end_at=datetime(2026, 10, 22, 16, 0, tzinfo=UTC),
+        status=BlockStatus.PLANNED,
+        task=mock_task,
+    )
+
+    mock_db = MagicMock()
+    mock_db.scalars = AsyncMock(side_effect=[[mock_task], [mock_block]])
+    mock_user = MagicMock(id=9)
+
+    resp = await schedule_api.export_schedule_ics(user=mock_user, db=mock_db, semester="Fall 2026")
+    assert resp.media_type == "text/calendar"
+    assert resp.headers["Content-Disposition"] == 'attachment; filename="studyflow_schedule.ics"'
+    body = resp.body.decode("utf-8")
+    assert "BEGIN:VCALENDAR" in body
+    assert "VERSION:2.0" in body
+    assert "PRODID:-//StudyFlow//EN" in body
+    assert "DTSTART:20261022T140000" in body
+    assert "DTEND:20261022T160000" in body
+    assert "DTSTART;VALUE=DATE:20261025" in body
+    assert "SUMMARY:[CS401] Study: Graph Theory Project" in body
+    assert "SUMMARY:[CS401] Deadline: Graph Theory Project" in body
+    assert mock_db.scalars.await_count == 2
+
+
+@pytest.mark.anyio
+async def test_date_specific_availability_overrides():
+    from datetime import date
+    from unittest.mock import AsyncMock, MagicMock
+    from app.schemas.planner import SlotCreate
+    from app.services.scheduler import _load_concrete_windows
+
+    # Thursday 2026-10-22 has weekday() == 3
+    slot_in = SlotCreate(
+        day_of_week=0,
+        specific_date=date(2026, 10, 22),
+        start_time=time(14, 0),
+        end_time=time(16, 0),
+        kind=SlotKind.AVAILABLE,
+    )
+    assert slot_in.day_of_week == 3
+
+    # Recurring Monday 09:00-12:00 + Date-specific blocked 10:00-11:00 on Monday 2026-10-26
+    recurring_avail = MagicMock(
+        day_of_week=0,
+        specific_date=None,
+        start_time=time(9, 0),
+        end_time=time(12, 0),
+        kind=SlotKind.AVAILABLE,
+    )
+    date_blocked = MagicMock(
+        day_of_week=0,
+        specific_date=date(2026, 10, 26),
+        start_time=time(10, 0),
+        end_time=time(11, 0),
+        kind=SlotKind.BLOCKED,
+    )
+    mock_db = MagicMock()
+    mock_db.scalars = AsyncMock(return_value=[recurring_avail, date_blocked])
+
+    windows, intervals = await _load_concrete_windows(
+        mock_db, user_id=1, today=date(2026, 10, 25), now_time=time(8, 0)
+    )
+    oct26_windows = [w for w in windows if w["date"] == "2026-10-26"]
+    assert [(w["start_time"], w["end_time"]) for w in oct26_windows] == [
+        ("09:00", "10:00"),
+        ("11:00", "12:00"),
+    ]
+    assert intervals["2026-10-26"] == [(540, 600), (660, 720)]
+
+
+@pytest.mark.anyio
+async def test_availability_slot_overlap_validation():
+    from datetime import date, time
+    from unittest.mock import AsyncMock, MagicMock
+    from fastapi import HTTPException
+    from app.api.v1.availability import _assert_no_overlapping_slots
+    from app.models import AvailabilitySlot, SlotKind
+
+    existing = AvailabilitySlot(
+        id=10,
+        user_id=1,
+        day_of_week=2,
+        specific_date=None,
+        start_time=time(10, 0),
+        end_time=time(12, 30),
+        kind=SlotKind.AVAILABLE,
+    )
+
+    mock_db = MagicMock()
+    mock_db.scalars = AsyncMock(return_value=[existing])
+
+    # 1. Overlapping available slot (11:00-13:00) should raise 409 Conflict
+    with pytest.raises(HTTPException) as exc_info:
+        await _assert_no_overlapping_slots(
+            mock_db,
+            user_id=1,
+            day_of_week=2,
+            specific_date=None,
+            start_time=time(11, 0),
+            end_time=time(13, 0),
+        )
+    assert exc_info.value.status_code == 409
+    assert "overlaps with existing available slot" in exc_info.value.detail
+
+    # 2. Overlapping blocked slot (10:30-11:30) should also raise 409 Conflict
+    with pytest.raises(HTTPException) as exc_info:
+        await _assert_no_overlapping_slots(
+            mock_db,
+            user_id=1,
+            day_of_week=2,
+            specific_date=None,
+            start_time=time(10, 30),
+            end_time=time(11, 30),
+        )
+    assert exc_info.value.status_code == 409
+
+    # 3. Adjacent slot (12:30-14:00) touching boundary should pass cleanly
+    await _assert_no_overlapping_slots(
+        mock_db,
+        user_id=1,
+        day_of_week=2,
+        specific_date=None,
+        start_time=time(12, 30),
+        end_time=time(14, 0),
+    )
+
+    # 4. Same slot being updated (exclude_slot_id=10) should pass
+    await _assert_no_overlapping_slots(
+        mock_db,
+        user_id=1,
+        day_of_week=2,
+        specific_date=None,
+        start_time=time(10, 0),
+        end_time=time(12, 30),
+        exclude_slot_id=10,
+    )
+
+    # 5. Different specific dates on same weekday should pass
+    date_slot = AvailabilitySlot(
+        id=11,
+        user_id=1,
+        day_of_week=2,
+        specific_date=date(2026, 10, 21),
+        start_time=time(14, 0),
+        end_time=time(16, 0),
+        kind=SlotKind.BLOCKED,
+    )
+    mock_db.scalars = AsyncMock(return_value=[date_slot])
+    await _assert_no_overlapping_slots(
+        mock_db,
+        user_id=1,
+        day_of_week=2,
+        specific_date=date(2026, 10, 28),
+        start_time=time(14, 0),
+        end_time=time(16, 0),
+    )
+
+
+
+
+

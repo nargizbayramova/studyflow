@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int = 5432
     DATABASE_URL: str | None = None
 
-    # Auth (used in Phase 2)
+    # Auth 
     SECRET_KEY: str = "change-me"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     JWT_ALGORITHM: str = "HS256"

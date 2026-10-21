@@ -10,6 +10,47 @@ export const DAYS = [
   "Sunday",
 ];
 
+export function toIsoDate(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+export function getMondayOfWeek(baseDate: Date): Date {
+  const d = new Date(baseDate);
+  const day = d.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+export function getWeekDatesFromMonday(monday: Date): Date[] {
+  return Array.from({ length: 7 }, (_, idx) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + idx);
+    return d;
+  });
+}
+
+export function formatWeekRange(weekDates: Date[]): string {
+  const start = weekDates[0];
+  const end = weekDates[6];
+  const sMonth = start.toLocaleDateString("en-US", { month: "short" });
+  const eMonth = end.toLocaleDateString("en-US", { month: "short" });
+  if (sMonth === eMonth) {
+    return `${sMonth} ${start.getDate()}–${end.getDate()}, ${end.getFullYear()}`;
+  }
+  return `${sMonth} ${start.getDate()}–${eMonth} ${end.getDate()}, ${end.getFullYear()}`;
+}
+
+export function formatShortDate(isoDate: string): string {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export function parseMinutes(timeStr: string): number {
   const [h, m] = timeStr.split(":").map(Number);
   return (h || 0) * 60 + (m || 0);
@@ -77,6 +118,17 @@ export function buildTimeOptions(currentValue: string): { value: string; label: 
   ].sort((a, b) => parseMinutes(a.value) - parseMinutes(b.value));
 }
 
+export function getEffectiveSlotsForWeek(
+  slots: AvailabilitySlot[],
+  weekDates: Date[] | null
+): AvailabilitySlot[] {
+  if (!weekDates) {
+    return slots.filter((s) => !s.specific_date);
+  }
+  const weekIsoSet = new Set(weekDates.map(toIsoDate));
+  return slots.filter((s) => !s.specific_date || weekIsoSet.has(s.specific_date));
+}
+
 export function computeSlotStats(slots: AvailabilitySlot[]) {
   let availableHours = 0;
   let blockedHours = 0;
@@ -97,30 +149,55 @@ export function computeSlotStats(slots: AvailabilitySlot[]) {
   return { availableHours, blockedHours, availableCount, blockedCount };
 }
 
-export function computePlannedHoursThisWeek(studyBlocks: StudyBlock[]): number {
-  const now = new Date();
-  const day = now.getDay();
-  const diffToMonday = (day === 0 ? -6 : 1) - day;
-  const weekStart = new Date(now);
-  weekStart.setDate(now.getDate() + diffToMonday);
+export function computePlannedHoursForWeek(
+  studyBlocks: StudyBlock[],
+  weekDates: Date[]
+): number {
+  const weekStart = new Date(weekDates[0]);
   weekStart.setHours(0, 0, 0, 0);
-
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 7);
+  const weekEnd = new Date(weekDates[6]);
+  weekEnd.setHours(23, 59, 59, 999);
 
   let weekHrs = 0;
-  let totalActiveHrs = 0;
-
   for (const block of studyBlocks) {
     if (block.status === "missed") continue;
     const start = new Date(block.start_at);
     const end = new Date(block.end_at);
-    const hrs = Math.max(0, (end.getTime() - start.getTime()) / (1000 * 60 * 60));
-    totalActiveHrs += hrs;
-    if (start >= weekStart && start < weekEnd) {
-      weekHrs += hrs;
+    if (start >= weekStart && start <= weekEnd) {
+      weekHrs += Math.max(0, (end.getTime() - start.getTime()) / 3_600_000);
     }
   }
+  return weekHrs;
+}
 
-  return weekHrs > 0 ? weekHrs : totalActiveHrs;
+export function findOverlappingSlot(
+  candidate: {
+    day_of_week: number;
+    specific_date?: string | null;
+    start_time: string;
+    end_time: string;
+  },
+  existingSlots: AvailabilitySlot[],
+  excludeSlotId?: number | null
+): AvailabilitySlot | null {
+  const candStart = parseMinutes(candidate.start_time);
+  const candEnd = parseMinutes(candidate.end_time);
+  if (candEnd <= candStart) return null;
+
+  for (const s of existingSlots) {
+    if (excludeSlotId != null && s.id === excludeSlotId) continue;
+    if (s.day_of_week !== candidate.day_of_week) continue;
+
+    // Slots with different explicit calendar dates do not share a day
+    if (candidate.specific_date && s.specific_date && candidate.specific_date !== s.specific_date) {
+      continue;
+    }
+
+    const sStart = parseMinutes(s.start_time);
+    const sEnd = parseMinutes(s.end_time);
+    if (candStart < sEnd && candEnd > sStart) {
+      return s;
+    }
+  }
+  return null;
 }

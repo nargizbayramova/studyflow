@@ -1,22 +1,31 @@
 import React, { useState, useMemo } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useSchedule } from "@/hooks/useSchedule";
-import { StudyBlock } from "@/types";
+import { useAvailabilitySlots } from "@/api/availability";
+import { useTasks } from "@/api/tasks";
+import { useCourses } from "@/api/courses";
+import { useWorkspace } from "@/context/WorkspaceContext";
+import { Course, StudyBlock } from "@/types";
 import { CalendarHeader, CalendarViewMode } from "./components/CalendarHeader";
 import { WeekView } from "./components/WeekView";
 import { DayView } from "./components/DayView";
 import { MonthView } from "./components/MonthView";
+import { CalendarFooter } from "./components/CalendarFooter";
 import { StudyBlockModal } from "./components/StudyBlockModal";
 import { AIScheduleResultModal } from "./components/AIScheduleResultModal";
 import {
-  getViewScheduledHours,
+  computeWeeklyAvailabilitySummary,
+  getViewBlocks,
   getWeekDays,
   groupBlocksByDate,
+  groupTasksByDueDate,
   shiftCalendarDate,
+  sumBlocksHours,
   toDateKey,
 } from "./calendarUtils";
 
 export const CalendarPage: React.FC = () => {
+  const { workspace } = useWorkspace();
   const {
     blocks,
     overloadWarning,
@@ -31,45 +40,70 @@ export const CalendarPage: React.FC = () => {
     rebalanceSchedule,
     updateBlockStatus,
   } = useSchedule();
+  const { data: availabilitySlots = [] } = useAvailabilitySlots();
+  const { data: tasks = [] } = useTasks({ semester: workspace });
+  const { data: courses = [] } = useCourses({ semester: workspace });
+
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   const [viewMode, setViewMode] = useState<CalendarViewMode>("week");
+  const [selectedTaskFilter, setSelectedTaskFilter] = useState<string>("all");
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
   const [selectedBlock, setSelectedBlock] = useState<StudyBlock | null>(null);
   const [initialSlot, setInitialSlot] = useState<Date | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate]);
-  const blocksByDate = useMemo(() => groupBlocksByDate(blocks), [blocks]);
-  const totalScheduledHours = useMemo(
-    () => getViewScheduledHours(blocks, currentDate, viewMode, weekDays),
-    [blocks, currentDate, viewMode, weekDays]
+  const coursesById = useMemo(
+    () => new Map<number, Course>(courses.map((c) => [c.id, c])),
+    [courses]
   );
-  const hasMissedBlocks = useMemo(() => blocks.some((b) => b.status === "missed"), [blocks]);
+  const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate]);
+
+  const filteredBlocks = useMemo(
+    () =>
+      blocks.filter((b) => {
+        if (selectedTaskFilter !== "all" && String(b.task_id) !== selectedTaskFilter) return false;
+        if (selectedStatusFilter !== "all" && b.status !== selectedStatusFilter) return false;
+        return true;
+      }),
+    [blocks, selectedTaskFilter, selectedStatusFilter]
+  );
+
+  const filteredTasks = useMemo(
+    () =>
+      selectedTaskFilter === "all"
+        ? tasks
+        : tasks.filter((t) => String(t.id) === selectedTaskFilter),
+    [tasks, selectedTaskFilter]
+  );
+
+  const blocksByDate = useMemo(() => groupBlocksByDate(filteredBlocks), [filteredBlocks]);
+  const tasksByDueDate = useMemo(() => groupTasksByDueDate(filteredTasks), [filteredTasks]);
+  const viewBlocks = useMemo(
+    () => getViewBlocks(filteredBlocks, currentDate, viewMode, weekDays),
+    [filteredBlocks, currentDate, viewMode, weekDays]
+  );
+  const plannedHours = useMemo(
+    () => sumBlocksHours(viewBlocks.filter((b) => b.status !== "missed")),
+    [viewBlocks]
+  );
+  const completedHours = useMemo(
+    () => sumBlocksHours(viewBlocks.filter((b) => b.status === "completed")),
+    [viewBlocks]
+  );
+  const { availableHours, blockedHours } = useMemo(
+    () => computeWeeklyAvailabilitySummary(availabilitySlots, weekDays),
+    [availabilitySlots, weekDays]
+  );
+
+  const hasMissedBlocks = blocks.some((b) => b.status === "missed");
   const activeRebalanceReason =
     rebalancePrompt ||
     (hasMissedBlocks
       ? "You have missed study sessions. Rebalance your schedule to redistribute remaining effort."
       : null);
 
-  const openCreateModal = (slot?: Date) => {
-    setSelectedBlock(null);
-    setInitialSlot(slot || null);
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (block: StudyBlock) => {
-    setSelectedBlock(block);
-    setInitialSlot(null);
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedBlock(null);
-    setInitialSlot(null);
-  };
-
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-5 sm:gap-6 max-w-7xl mx-auto font-sans">
       <CalendarHeader
         currentDate={currentDate}
         weekDays={weekDays}
@@ -78,12 +112,24 @@ export const CalendarPage: React.FC = () => {
         onPrev={() => setCurrentDate((d) => shiftCalendarDate(d, viewMode, -1))}
         onNext={() => setCurrentDate((d) => shiftCalendarDate(d, viewMode, 1))}
         onToday={() => setCurrentDate(new Date())}
-        onAddBlock={() => openCreateModal()}
+        onAddBlock={() => {
+          setSelectedBlock(null);
+          setInitialSlot(null);
+          setIsModalOpen(true);
+        }}
         onGenerateSchedule={() => void generateSchedule()}
         onRebalanceSchedule={() => void rebalanceSchedule()}
         isGenerating={isGenerating}
         isRebalancing={isRebalancing}
-        totalScheduledHours={totalScheduledHours}
+        plannedHours={plannedHours}
+        completedHours={completedHours}
+        availableHours={availableHours}
+        blockedHours={blockedHours}
+        tasks={tasks}
+        selectedTaskFilter={selectedTaskFilter}
+        onTaskFilterChange={setSelectedTaskFilter}
+        selectedStatusFilter={selectedStatusFilter}
+        onStatusFilterChange={setSelectedStatusFilter}
       />
 
       {activeRebalanceReason && (
@@ -115,7 +161,7 @@ export const CalendarPage: React.FC = () => {
         <div className="flex items-center gap-3 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-medium">
           <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
           <span>
-            Overload warning: Your pending tasks require more study hours than your available weekly slots before their deadlines. Consider extending your availability or adjusting task estimates.
+            Overload warning: Your pending tasks require more study hours than your available weekly slots before their deadlines.
           </span>
         </div>
       )}
@@ -130,8 +176,19 @@ export const CalendarPage: React.FC = () => {
         <WeekView
           weekDays={weekDays}
           blocksByDate={blocksByDate}
-          onSelectBlock={openEditModal}
-          onSelectSlot={openCreateModal}
+          tasksByDueDate={tasksByDueDate}
+          coursesById={coursesById}
+          availabilitySlots={availabilitySlots}
+          onSelectBlock={(block) => {
+            setSelectedBlock(block);
+            setInitialSlot(null);
+            setIsModalOpen(true);
+          }}
+          onSelectSlot={(slot) => {
+            setSelectedBlock(null);
+            setInitialSlot(slot);
+            setIsModalOpen(true);
+          }}
           onStatusChange={(b, status) => void updateBlockStatus(b, status)}
         />
       )}
@@ -140,8 +197,19 @@ export const CalendarPage: React.FC = () => {
         <DayView
           currentDate={currentDate}
           dayBlocks={blocksByDate.get(toDateKey(currentDate)) ?? []}
-          onSelectBlock={openEditModal}
-          onSelectSlot={openCreateModal}
+          dayTasks={tasksByDueDate.get(toDateKey(currentDate)) ?? []}
+          coursesById={coursesById}
+          availabilitySlots={availabilitySlots}
+          onSelectBlock={(block) => {
+            setSelectedBlock(block);
+            setInitialSlot(null);
+            setIsModalOpen(true);
+          }}
+          onSelectSlot={(slot) => {
+            setSelectedBlock(null);
+            setInitialSlot(slot);
+            setIsModalOpen(true);
+          }}
           onStatusChange={(b, status) => void updateBlockStatus(b, status)}
         />
       )}
@@ -150,14 +218,29 @@ export const CalendarPage: React.FC = () => {
         <MonthView
           currentDate={currentDate}
           blocksByDate={blocksByDate}
-          onSelectBlock={openEditModal}
-          onSelectSlot={openCreateModal}
+          onSelectBlock={(block) => {
+            setSelectedBlock(block);
+            setInitialSlot(null);
+            setIsModalOpen(true);
+          }}
+          onSelectSlot={(slot) => {
+            setSelectedBlock(null);
+            setInitialSlot(slot);
+            setIsModalOpen(true);
+          }}
         />
       )}
 
+      <CalendarFooter />
+
       <StudyBlockModal
+        key={selectedBlock?.id ?? initialSlot?.getTime() ?? "new"}
         isOpen={isModalOpen}
-        onClose={closeModal}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedBlock(null);
+          setInitialSlot(null);
+        }}
         block={selectedBlock}
         initialSlot={initialSlot}
       />
