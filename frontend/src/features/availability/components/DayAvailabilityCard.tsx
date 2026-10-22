@@ -1,6 +1,6 @@
 import React from "react";
 import { Pencil } from "lucide-react";
-import { AvailabilitySlot, SlotKind } from "@/types";
+import { AvailabilitySlot, SlotKind } from "@/features/availability/types";
 import { DaySlotColumn } from "./DaySlotColumn";
 
 interface DayAvailabilityRowProps {

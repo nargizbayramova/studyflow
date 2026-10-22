@@ -1,5 +1,5 @@
 import React from "react";
-import { AvailabilitySlot } from "@/types";
+import { AvailabilitySlot } from "@/features/availability/types";
 import { END_HOUR, START_HOUR, parseTimeHours } from "../calendarUtils";
 
 interface AvailabilitySlotOverlayProps {

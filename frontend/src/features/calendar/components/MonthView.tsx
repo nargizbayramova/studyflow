@@ -1,5 +1,5 @@
 import React from "react";
-import { StudyBlock } from "@/types";
+import { StudyBlock } from "@/features/calendar/types";
 import { getMonthGridDays, isToday, toDateKey, toSolidPastel, WEEKDAY_LABELS } from "../calendarUtils";
 
 interface MonthViewProps {

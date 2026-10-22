@@ -1,5 +1,6 @@
 import React from "react";
-import { Course, Task } from "@/types";
+import { Course } from "@/features/courses/types";
+import { Task } from "@/features/tasks/types";
 
 interface CourseGlancePanelProps {
   course: Course;

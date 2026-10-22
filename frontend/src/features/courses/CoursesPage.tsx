@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Archive, CheckSquare, Square } from "lucide-react";
-import { useCourses, useCreateCourse } from "@/api/courses";
-import { useTasks } from "@/api/tasks";
-import { useWorkspace } from "@/context/WorkspaceContext";
-import { Spinner } from "@/components/common/Spinner";
+import { useCourses, useCreateCourse } from "@/features/courses/api/courses";
+import { useTasks } from "@/features/tasks/api/tasks";
+import { useWorkspace } from "@/features/workspace/context/WorkspaceContext";
+import { Spinner } from "@/shared/ui/Spinner";
 import { CourseCard } from "./components/CourseCard";
 import { CourseModal } from "./components/CourseModal";
 

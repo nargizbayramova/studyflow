@@ -1,7 +1,8 @@
 import React from "react";
 import { Search, ArrowDownWideNarrow } from "lucide-react";
-import { Course, TaskPriority, TaskStatus, TaskType } from "@/types";
-import { Select } from "@/components/common/Select";
+import { Course } from "@/features/courses/types";
+import { TaskPriority, TaskStatus, TaskType } from "@/features/tasks/types";
+import { Select } from "@/shared/ui/Select";
 
 interface TaskFiltersBarProps {
   search: string;

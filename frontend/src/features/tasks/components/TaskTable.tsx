@@ -1,5 +1,6 @@
 import React from "react";
-import { Task, Course } from "@/types";
+import { Task } from "@/features/tasks/types";
+import { Course } from "@/features/courses/types";
 import { TaskTableRow } from "./TaskTableRow";
 
 interface TaskTableProps {

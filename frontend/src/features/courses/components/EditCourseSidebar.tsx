@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Archive } from "lucide-react";
-import { Course } from "@/types";
-import { useUpdateCourse, useDeleteCourse } from "@/api/courses";
-import { Input } from "@/components/common/Input";
-import { FIGMA_COURSE_COLORS } from "./CourseModal";
+import { Archive } from "lucide-react";
+import { Course } from "@/features/courses/types";
+import { useUpdateCourse, useDeleteCourse } from "@/features/courses/api/courses";
+import { useCourseForm } from "../hooks/useCourseForm";
+import { CourseFields } from "./CourseFields";
 
 interface EditCourseSidebarProps {
   course: Course;
@@ -14,12 +14,7 @@ export const EditCourseSidebar: React.FC<EditCourseSidebarProps> = ({ course }) 
   const navigate = useNavigate();
   const updateCourse = useUpdateCourse();
   const deleteCourse = useDeleteCourse();
-
-  const [code, setCode] = useState(course.code);
-  const [title, setTitle] = useState(course.title);
-  const [instructor, setInstructor] = useState(course.instructor || "");
-  const [semester, setSemester] = useState(course.semester);
-  const [color, setColor] = useState(course.color);
+  const { values, set, toPayload } = useCourseForm(course);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,16 +23,7 @@ export const EditCourseSidebar: React.FC<EditCourseSidebarProps> = ({ course }) 
     setLoading(true);
     setError(null);
     try {
-      await updateCourse.mutateAsync({
-        id: course.id,
-        data: {
-          code,
-          title,
-          instructor: instructor || null,
-          semester,
-          color,
-        },
-      });
+      await updateCourse.mutateAsync({ id: course.id, data: toPayload() });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to update course");
     } finally {
@@ -45,25 +31,17 @@ export const EditCourseSidebar: React.FC<EditCourseSidebarProps> = ({ course }) 
     }
   };
 
-  const handleArchiveToggle = async () => {
-    try {
-      await updateCourse.mutateAsync({
-        id: course.id,
-        data: { is_archived: !course.is_archived },
-      });
-    } catch {
-      // handled
-    }
-  };
+  // Mutation errors are surfaced globally by the API client, so these swallow the rejection.
+  const handleArchiveToggle = () =>
+    updateCourse.mutateAsync({ id: course.id, data: { is_archived: !course.is_archived } }).catch(() => undefined);
 
   const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete this course? All associated tasks will be removed.")) {
-      try {
-        await deleteCourse.mutateAsync(course.id);
-        navigate("/courses");
-      } catch {
-        // handled
-      }
+    if (!window.confirm("Are you sure you want to delete this course? All associated tasks will be removed.")) return;
+    try {
+      await deleteCourse.mutateAsync(course.id);
+      navigate("/courses");
+    } catch {
+      // surfaced globally
     }
   };
 
@@ -74,56 +52,10 @@ export const EditCourseSidebar: React.FC<EditCourseSidebarProps> = ({ course }) 
         <p className="text-xs text-[#747683]">Update course details for this semester.</p>
       </div>
 
-      {error && (
-        <div className="p-2.5 rounded-lg bg-rose-50 text-rose-700 text-xs font-medium">
-          {error}
-        </div>
-      )}
+      {error && <div className="p-2.5 rounded-lg bg-rose-50 text-rose-700 text-xs font-medium">{error}</div>}
 
       <form onSubmit={handleSave} className="flex flex-col gap-3.5">
-        <Input
-          label="Course code"
-          required
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-        />
-
-        <Input
-          label="Course title"
-          required
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-
-        <Input
-          label="Instructor"
-          value={instructor}
-          onChange={(e) => setInstructor(e.target.value)}
-        />
-
-        <Input
-          label="Semester"
-          required
-          value={semester}
-          onChange={(e) => setSemester(e.target.value)}
-        />
-
-        <div className="flex flex-col gap-1.5 pt-1">
-          <label className="text-[13px] font-semibold text-[#252735]">Course color</label>
-          <div className="flex items-center gap-2.5">
-            {FIGMA_COURSE_COLORS.map((c) => (
-              <button
-                type="button"
-                key={c}
-                onClick={() => setColor(c)}
-                className="w-[28px] h-[28px] rounded-full flex items-center justify-center transition-transform hover:scale-110 cursor-pointer"
-                style={{ backgroundColor: c }}
-              >
-                {color === c && <Check className="w-3.5 h-3.5 text-white" />}
-              </button>
-            ))}
-          </div>
-        </div>
+        <CourseFields values={values} onChange={set} swatchClassName="w-[28px] h-[28px]" />
 
         <div className="flex items-center gap-2.5 pt-3">
           <button
@@ -145,7 +77,6 @@ export const EditCourseSidebar: React.FC<EditCourseSidebarProps> = ({ course }) 
 
       <div className="h-[1px] bg-[#E5E6EB] w-full my-1" />
 
-      {/* Archive course */}
       <div className="flex flex-col gap-1">
         <button
           onClick={handleArchiveToggle}
@@ -154,15 +85,10 @@ export const EditCourseSidebar: React.FC<EditCourseSidebarProps> = ({ course }) 
           <span>{course.is_archived ? "Unarchive course" : "Archive course"}</span>
           <Archive className="w-3.5 h-3.5" />
         </button>
-        <span className="text-[11px] text-[#747683]">
-          Hide from active courses. All tasks stay saved.
-        </span>
+        <span className="text-[11px] text-[#747683]">Hide from active courses. All tasks stay saved.</span>
       </div>
 
-      <button
-        onClick={handleDelete}
-        className="text-left text-xs text-[#B45353] hover:underline cursor-pointer pt-1"
-      >
+      <button onClick={handleDelete} className="text-left text-xs text-[#B45353] hover:underline cursor-pointer pt-1">
         Delete course…
       </button>
     </div>

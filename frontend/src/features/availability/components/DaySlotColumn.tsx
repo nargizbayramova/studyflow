@@ -1,6 +1,6 @@
 import React from "react";
 import { Plus } from "lucide-react";
-import { AvailabilitySlot } from "@/types";
+import { AvailabilitySlot } from "@/features/availability/types";
 import {
   formatHoursLabel,
   formatShortDate,

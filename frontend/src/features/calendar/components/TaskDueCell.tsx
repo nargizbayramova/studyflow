@@ -1,7 +1,8 @@
 import React from "react";
 import { Flag } from "lucide-react";
-import { Course, Task } from "@/types";
-import { buildGoogleCalendarUrl } from "@/utils/calendar";
+import { Course } from "@/features/courses/types";
+import { Task } from "@/features/tasks/types";
+import { buildGoogleCalendarUrl } from "@/shared/lib/calendar";
 
 interface TaskDueCellProps {
   tasks: Task[];

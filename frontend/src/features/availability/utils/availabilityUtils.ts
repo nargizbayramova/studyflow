@@ -1,4 +1,5 @@
-import { AvailabilitySlot, StudyBlock } from "@/types";
+import { AvailabilitySlot } from "@/features/availability/types";
+import { StudyBlock } from "@/features/calendar/types";
 
 export const DAYS = [
   "Monday",

@@ -1,7 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { ArrowUpRight } from "lucide-react";
-import { Course, Task } from "@/types";
+import { Course } from "@/features/courses/types";
+import { Task } from "@/features/tasks/types";
 
 interface CourseCardProps {
   course: Course;

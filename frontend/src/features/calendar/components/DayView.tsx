@@ -1,6 +1,9 @@
 import React from "react";
 import { Clock, Plus } from "lucide-react";
-import { AvailabilitySlot, Course, StudyBlock, Task } from "@/types";
+import { AvailabilitySlot } from "@/features/availability/types";
+import { Course } from "@/features/courses/types";
+import { StudyBlock } from "@/features/calendar/types";
+import { Task } from "@/features/tasks/types";
 import { AvailabilitySlotOverlay } from "./AvailabilitySlotOverlay";
 import { StudyBlockCard } from "./StudyBlockCard";
 import { TaskDueCell } from "./TaskDueCell";

@@ -1,9 +1,9 @@
 import React from "react";
 import { useParams, Link } from "react-router-dom";
 import { Plus } from "lucide-react";
-import { useCourse } from "@/api/courses";
-import { useTasks } from "@/api/tasks";
-import { Spinner } from "@/components/common/Spinner";
+import { useCourse } from "@/features/courses/api/courses";
+import { useTasks } from "@/features/tasks/api/tasks";
+import { Spinner } from "@/shared/ui/Spinner";
 import { CourseGlancePanel } from "./components/CourseGlancePanel";
 import { CourseTasksPanel } from "./components/CourseTasksPanel";
 import { EditCourseSidebar } from "./components/EditCourseSidebar";

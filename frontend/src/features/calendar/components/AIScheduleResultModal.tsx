@@ -1,9 +1,9 @@
 import React from "react";
 import { AlertTriangle, CheckCircle2, Sparkles } from "lucide-react";
-import { ScheduleResponse } from "@/types";
-import { Modal } from "@/components/common/Modal";
-import { CourseTag } from "@/components/common/CourseTag";
-import { Button } from "@/components/common/Button";
+import { ScheduleResponse } from "@/features/calendar/types";
+import { Modal } from "@/shared/ui/Modal";
+import { CourseTag } from "@/shared/ui/CourseTag";
+import { Button } from "@/shared/ui/Button";
 import { formatTimeRange, sumBlocksHours } from "../calendarUtils";
 
 interface AIScheduleResultModalProps {

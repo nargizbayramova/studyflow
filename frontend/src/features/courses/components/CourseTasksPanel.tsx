@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Circle, CheckCircle2, Pencil } from "lucide-react";
-import { Task } from "@/types";
-import { useUpdateTask } from "@/api/tasks";
+import { Task } from "@/features/tasks/types";
+import { useUpdateTask } from "@/features/tasks/api/tasks";
 
 interface CourseTasksPanelProps {
   tasks: Task[];

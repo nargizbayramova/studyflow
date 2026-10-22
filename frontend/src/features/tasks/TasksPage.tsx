@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { Plus } from "lucide-react";
 import {
   useTasks,
@@ -6,12 +6,13 @@ import {
   useUpdateTask,
   useDeleteTask,
   usePrioritizeTasks,
-} from "@/api/tasks";
-import { useCourses } from "@/api/courses";
-import { useWorkspace } from "@/context/WorkspaceContext";
-import { Task, TaskPriority, TaskStatus, TaskType } from "@/types";
-import { Header } from "@/components/layout/Header";
-import { Button } from "@/components/common/Button";
+} from "@/features/tasks/api/tasks";
+import { useCourses } from "@/features/courses/api/courses";
+import { useWorkspace } from "@/features/workspace/context/WorkspaceContext";
+import { Task, TaskStatus } from "@/features/tasks/types";
+import { Header } from "@/app/layout/Header";
+import { Button } from "@/shared/ui/Button";
+import { useTaskFilters } from "./hooks/useTaskFilters";
 import { TaskSummaryBadges } from "./components/TaskSummaryBadges";
 import { TaskFiltersBar } from "./components/TaskFiltersBar";
 import { TaskTable } from "./components/TaskTable";
@@ -25,50 +26,15 @@ export const TasksPage: React.FC = () => {
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
   const { prioritizeTasks, isPrioritizing } = usePrioritizeTasks();
-
-  const [search, setSearch] = useState("");
-  const [selectedCourseId, setSelectedCourseId] = useState<number | undefined>();
-  const [selectedType, setSelectedType] = useState<TaskType | undefined>();
-  const [selectedStatus, setSelectedStatus] = useState<TaskStatus | undefined>();
-  const [selectedPriority, setSelectedPriority] = useState<TaskPriority | undefined>();
-  const [sortByEarliest, setSortByEarliest] = useState(true);
-  const [tab, setTab] = useState<"all" | "open" | "completed">("all");
+  const { filteredTasks, openCount, completedCount, tab, setTab, barProps } = useTaskFilters(tasks);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  const openCount = useMemo(() => tasks.filter((t) => t.status !== "completed").length, [tasks]);
-  const completedCount = useMemo(
-    () => tasks.filter((t) => t.status === "completed").length,
-    [tasks]
-  );
-
-  const filteredTasks = useMemo(() => {
-    return tasks
-      .filter((task) => {
-        if (search && !task.title.toLowerCase().includes(search.toLowerCase())) return false;
-        if (selectedCourseId !== undefined && task.course_id !== selectedCourseId) return false;
-        if (selectedType && task.type !== selectedType) return false;
-        if (selectedStatus && task.status !== selectedStatus) return false;
-        if (selectedPriority && task.priority !== selectedPriority) return false;
-        if (tab === "open" && task.status === "completed") return false;
-        if (tab === "completed" && task.status !== "completed") return false;
-        return true;
-      })
-      .sort((a, b) => {
-        if (a.status === "completed" && b.status !== "completed") return 1;
-        if (a.status !== "completed" && b.status === "completed") return -1;
-        if (a.status !== "completed" && b.status !== "completed") {
-          if (a.priority_rank != null && b.priority_rank != null) {
-            return a.priority_rank - b.priority_rank;
-          }
-          if (a.priority_rank != null) return -1;
-          if (b.priority_rank != null) return 1;
-        }
-        const diff = new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
-        return sortByEarliest ? diff : -diff;
-      });
-  }, [tasks, search, selectedCourseId, selectedType, selectedStatus, selectedPriority, sortByEarliest, tab]);
+  const openModal = (task: Task | null) => {
+    setEditingTask(task);
+    setIsModalOpen(true);
+  };
 
   const handleToggle = (task: Task) => {
     const nextStatus: TaskStatus = task.status === "completed" ? "pending" : "completed";
@@ -90,14 +56,7 @@ export const TasksPage: React.FC = () => {
             >
               {isPrioritizing ? "Prioritizing..." : "⚡ Prioritize with AI"}
             </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditingTask(null);
-                setIsModalOpen(true);
-              }}
-              className="bg-[#5553B7] hover:bg-[#48469F] text-white"
-            >
+            <Button size="sm" onClick={() => openModal(null)} className="bg-[#5553B7] hover:bg-[#48469F] text-white">
               <Plus className="w-4 h-4" /> Add task
             </Button>
           </div>
@@ -105,22 +64,7 @@ export const TasksPage: React.FC = () => {
       />
 
       <TaskSummaryBadges tasks={tasks} />
-
-      <TaskFiltersBar
-        search={search}
-        onSearchChange={setSearch}
-        courses={courses}
-        selectedCourseId={selectedCourseId}
-        onCourseChange={setSelectedCourseId}
-        selectedType={selectedType}
-        onTypeChange={setSelectedType}
-        selectedStatus={selectedStatus}
-        onStatusChange={setSelectedStatus}
-        selectedPriority={selectedPriority}
-        onPriorityChange={setSelectedPriority}
-        sortByEarliest={sortByEarliest}
-        onToggleSort={() => setSortByEarliest((prev) => !prev)}
-      />
+      <TaskFiltersBar courses={courses} {...barProps} />
 
       <TaskTable
         tasks={filteredTasks}
@@ -131,10 +75,7 @@ export const TasksPage: React.FC = () => {
         openCount={openCount}
         completedCount={completedCount}
         onToggle={handleToggle}
-        onEdit={(task) => {
-          setEditingTask(task);
-          setIsModalOpen(true);
-        }}
+        onEdit={openModal}
       />
 
       <TaskModal
@@ -146,11 +87,8 @@ export const TasksPage: React.FC = () => {
         initialData={editingTask}
         courses={courses}
         onSubmit={async (data) => {
-          if (editingTask) {
-            await updateTask.mutateAsync({ id: editingTask.id, data });
-          } else {
-            await createTask.mutateAsync(data);
-          }
+          if (editingTask) await updateTask.mutateAsync({ id: editingTask.id, data });
+          else await createTask.mutateAsync(data);
         }}
         onDelete={async (id) => {
           await deleteTask.mutateAsync(id);

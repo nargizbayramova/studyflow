@@ -1,14 +1,14 @@
 import React, { useState } from "react";
-import { StudyBlock } from "@/types";
-import { useCreateStudyBlock, useDeleteStudyBlock, useUpdateStudyBlock } from "@/api/studyBlocks";
-import { useSchedule } from "@/hooks/useSchedule";
-import { useTasks } from "@/api/tasks";
-import { useWorkspace } from "@/context/WorkspaceContext";
-import { Modal } from "@/components/common/Modal";
-import { Input } from "@/components/common/Input";
-import { Button } from "@/components/common/Button";
-import { CourseTag } from "@/components/common/CourseTag";
-import { Select } from "@/components/common/Select";
+import { StudyBlock } from "@/features/calendar/types";
+import { useCreateStudyBlock, useDeleteStudyBlock, useUpdateStudyBlock } from "@/features/calendar/api/studyBlocks";
+import { useSchedule } from "@/features/calendar/hooks/useSchedule";
+import { useTasks } from "@/features/tasks/api/tasks";
+import { useWorkspace } from "@/features/workspace/context/WorkspaceContext";
+import { Modal } from "@/shared/ui/Modal";
+import { Input } from "@/shared/ui/Input";
+import { Button } from "@/shared/ui/Button";
+import { CourseTag } from "@/shared/ui/CourseTag";
+import { Select } from "@/shared/ui/Select";
 import { getInitialBlockTimes } from "../calendarUtils";
 
 interface StudyBlockModalProps {

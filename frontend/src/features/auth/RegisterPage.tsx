@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
-import { useRegister } from "@/api/auth";
-import { useAuth } from "@/context/AuthContext";
+import { useRegister } from "@/features/auth/api/auth";
+import { useAuth } from "@/features/auth/context/AuthContext";
 import { AuthLayout } from "./AuthLayout";
-import { Input } from "@/components/common/Input";
-import { Spinner } from "@/components/common/Spinner";
+import { Input } from "@/shared/ui/Input";
+import { Spinner } from "@/shared/ui/Spinner";
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();

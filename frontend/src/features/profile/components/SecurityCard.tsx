@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Lock, Check } from "lucide-react";
-import { useUpdateMe } from "@/api/auth";
-import { Input } from "@/components/common/Input";
-import { Button } from "@/components/common/Button";
+import { useUpdateMe } from "@/features/auth/api/auth";
+import { Input } from "@/shared/ui/Input";
+import { Button } from "@/shared/ui/Button";
 
 export const SecurityCard: React.FC = () => {
   const updateMe = useUpdateMe();

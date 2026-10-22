@@ -1,7 +1,7 @@
 import React from "react";
 import { Clock } from "lucide-react";
-import { StudyBlock } from "@/types";
-import { buildGoogleCalendarUrl } from "@/utils/calendar";
+import { StudyBlock } from "@/features/calendar/types";
+import { buildGoogleCalendarUrl } from "@/shared/lib/calendar";
 import { START_HOUR, formatTimeRange, toSolidPastel } from "../calendarUtils";
 
 interface StudyBlockCardProps {

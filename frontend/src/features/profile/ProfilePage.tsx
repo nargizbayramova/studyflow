@@ -1,8 +1,8 @@
 import React from "react";
 import { LogOut } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
-import { Header } from "@/components/layout/Header";
-import { Button } from "@/components/common/Button";
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { Header } from "@/app/layout/Header";
+import { Button } from "@/shared/ui/Button";
 import { ProfileInfoCard } from "./components/ProfileInfoCard";
 import { AcademicPreferencesCard } from "./components/AcademicPreferencesCard";
 import { SecurityCard } from "./components/SecurityCard";

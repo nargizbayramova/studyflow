@@ -1,5 +1,7 @@
 import React from "react";
-import { Task, Course, StudyBlock } from "@/types";
+import { Task } from "@/features/tasks/types";
+import { Course } from "@/features/courses/types";
+import { StudyBlock } from "@/features/calendar/types";
 
 interface DashboardStatsProps {
   tasks: Task[];

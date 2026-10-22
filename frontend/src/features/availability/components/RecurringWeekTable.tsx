@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { AvailabilitySlot, SlotKind } from "@/types";
+import { AvailabilitySlot, SlotKind } from "@/features/availability/types";
 import { DAYS, formatWeekRange } from "../utils/availabilityUtils";
 import { DayAvailabilityCard } from "./DayAvailabilityCard";
 

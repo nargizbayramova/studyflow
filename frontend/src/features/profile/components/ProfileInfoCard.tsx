@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { User, Check } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
-import { useUpdateMe } from "@/api/auth";
-import { Input } from "@/components/common/Input";
-import { Button } from "@/components/common/Button";
+import { useAuth } from "@/features/auth/context/AuthContext";
+import { useUpdateMe } from "@/features/auth/api/auth";
+import { Input } from "@/shared/ui/Input";
+import { Button } from "@/shared/ui/Button";
 
 export const ProfileInfoCard: React.FC = () => {
   const { user } = useAuth();

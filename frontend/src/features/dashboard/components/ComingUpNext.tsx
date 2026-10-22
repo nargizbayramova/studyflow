@@ -1,12 +1,13 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Flag } from "lucide-react";
-import { Task, Course } from "@/types";
-import { usePrioritizeTasks } from "@/api/tasks";
-import { useWorkspace } from "@/context/WorkspaceContext";
-import { CourseTag } from "@/components/common/CourseTag";
-import { PriorityBadge, UrgencyBadge } from "@/components/common/PriorityBadge";
-import { buildGoogleCalendarUrl } from "@/utils/calendar";
+import { Task } from "@/features/tasks/types";
+import { Course } from "@/features/courses/types";
+import { usePrioritizeTasks } from "@/features/tasks/api/tasks";
+import { useWorkspace } from "@/features/workspace/context/WorkspaceContext";
+import { CourseTag } from "@/shared/ui/CourseTag";
+import { PriorityBadge, UrgencyBadge } from "@/shared/ui/PriorityBadge";
+import { buildGoogleCalendarUrl } from "@/shared/lib/calendar";
 
 interface ComingUpNextProps {
   tasks: Task[];

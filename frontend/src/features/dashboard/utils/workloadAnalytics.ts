@@ -1,4 +1,6 @@
-import { AvailabilitySlot, StudyBlock, Task } from "@/types";
+import { AvailabilitySlot } from "@/features/availability/types";
+import { StudyBlock } from "@/features/calendar/types";
+import { Task } from "@/features/tasks/types";
 import {
   getMondayOfWeek,
   getSlotDurationHours,

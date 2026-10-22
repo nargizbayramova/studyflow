@@ -1,9 +1,12 @@
 import React from "react";
 import { Circle, CheckCircle2, MoreHorizontal } from "lucide-react";
-import { Task, Course } from "@/types";
-import { CourseTag } from "@/components/common/CourseTag";
-import { PriorityBadge, UrgencyBadge } from "@/components/common/PriorityBadge";
-import { buildGoogleCalendarUrl } from "@/utils/calendar";
+import { Task } from "@/features/tasks/types";
+import { Course } from "@/features/courses/types";
+import { CourseTag } from "@/shared/ui/CourseTag";
+import { PriorityBadge, UrgencyBadge } from "@/shared/ui/PriorityBadge";
+import { buildGoogleCalendarUrl } from "@/shared/lib/calendar";
+import { formatDeadline, formatType } from "../utils/taskFormat";
+import { TaskStatusBadge } from "./TaskStatusBadge";
 
 interface TaskTableRowProps {
   task: Task;
@@ -20,52 +23,7 @@ export const TaskTableRow: React.FC<TaskTableRowProps> = ({
 }) => {
   const isCompleted = task.status === "completed";
 
-  const formatDeadline = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const now = new Date();
-    const isTomorrow =
-      d.getDate() === now.getDate() + 1 &&
-      d.getMonth() === now.getMonth() &&
-      d.getFullYear() === now.getFullYear();
-
-    const dateText = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    const timeText = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-    return {
-      day: isTomorrow ? `${dateText} · Tomorrow` : dateText,
-      time: timeText,
-    };
-  };
-
   const { day, time } = formatDeadline(task.due_date);
-
-  const formatType = (type: string) => {
-    return type
-      .split("_")
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ");
-  };
-
-  const getStatusBadge = (status: string) => {
-    if (status === "completed") {
-      return (
-        <span className="px-2.5 py-1 rounded-md bg-[#EAF4EF] text-[#327864] text-xs font-medium">
-          Completed
-        </span>
-      );
-    }
-    if (status === "in_progress") {
-      return (
-        <span className="px-2.5 py-1 rounded-md bg-[#EFEEF9] text-[#5553B7] text-xs font-medium">
-          In progress
-        </span>
-      );
-    }
-    return (
-      <span className="px-2.5 py-1 rounded-md bg-[#F7F7F4] text-[#747683] text-xs font-medium">
-        Pending
-      </span>
-    );
-  };
 
   return (
     <div className="py-3.5 px-2 sm:px-4 border-b border-[#E5E6EB] hover:bg-slate-50/60 transition-colors flex flex-col md:flex-row md:items-center gap-2.5 md:gap-4 text-xs">
@@ -133,7 +91,7 @@ export const TaskTableRow: React.FC<TaskTableRowProps> = ({
         </div>
 
         {/* Status */}
-        <div className="md:w-[105px] flex-shrink-0">{getStatusBadge(task.status)}</div>
+        <div className="md:w-[105px] flex-shrink-0"><TaskStatusBadge status={task.status} /></div>
 
         {/* Priority */}
         <div className="md:w-[80px] flex-shrink-0">

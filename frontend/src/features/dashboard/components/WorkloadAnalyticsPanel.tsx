@@ -1,7 +1,9 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { AlertTriangle, BarChart3, CheckCircle2 } from "lucide-react";
-import { AvailabilitySlot, StudyBlock, Task } from "@/types";
+import { AvailabilitySlot } from "@/features/availability/types";
+import { StudyBlock } from "@/features/calendar/types";
+import { Task } from "@/features/tasks/types";
 import { computeWorkloadAnalytics, StressLevel } from "../utils/workloadAnalytics";
 
 interface WorkloadAnalyticsPanelProps {
